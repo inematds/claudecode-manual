@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💻 Claude Code Deep Dive | INEMA.CLUB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: '#FACC15',
+                        dark: { 900: '#0f0f0f', 800: '#1a1a1a', 700: '#2a2a2a', 600: '#3a3a3a' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Light mode overrides */
+        html:not(.dark) .bg-dark-900 { background-color: #ffffff !important; }
+        html:not(.dark) .bg-dark-800 { background-color: #f9fafb !important; }
+        html:not(.dark) .bg-dark-700 { background-color: #f3f4f6 !important; }
+        html:not(.dark) .bg-dark-600 { background-color: #e5e7eb !important; }
+        html:not(.dark) .text-white { color: #111827 !important; }
+        html:not(.dark) .text-gray-400 { color: #6b7280 !important; }
+        html:not(.dark) .text-gray-300 { color: #4b5563 !important; }
+        html:not(.dark) .text-gray-500 { color: #6b7280 !important; }
+        html:not(.dark) .border-dark-700 { border-color: #e5e7eb !important; }
+        html:not(.dark) .border-dark-600 { border-color: #d1d5db !important; }
+
+        /* Remove gradients in light mode */
+        html:not(.dark) [class*="bg-gradient-to"] { background-image: none !important; }
+
+        /* Special colors in light mode */
+        html:not(.dark) .text-primary { color: #a16207 !important; }
+        html:not(.dark) .text-yellow-400 { color: #a16207 !important; }
+        html:not(.dark) .text-sky-400 { color: #0369a1 !important; }
+
+        /* Nav override */
+        html:not(.dark) nav { background-color: rgba(255, 255, 255, 0.9) !important; border-bottom: 1px solid #e5e7eb !important; }
+
+        /* Track color overrides for light mode */
+        html:not(.dark) .text-emerald-400 { color: #059669 !important; }
+        html:not(.dark) .bg-emerald-500\/20 { background-color: rgba(5, 150, 105, 0.1) !important; }
+        html:not(.dark) .border-emerald-500\/30 { border-color: rgba(5, 150, 105, 0.25) !important; }
+
+        html:not(.dark) .text-blue-400 { color: #2563eb !important; }
+        html:not(.dark) .bg-blue-500\/20 { background-color: rgba(37, 99, 235, 0.1) !important; }
+        html:not(.dark) .border-blue-500\/30 { border-color: rgba(37, 99, 235, 0.25) !important; }
+
+        html:not(.dark) .text-purple-400 { color: #7c3aed !important; }
+        html:not(.dark) .bg-purple-500\/20 { background-color: rgba(124, 58, 237, 0.1) !important; }
+        html:not(.dark) .border-purple-500\/30 { border-color: rgba(124, 58, 237, 0.25) !important; }
+
+        html:not(.dark) .text-amber-400 { color: #d97706 !important; }
+        html:not(.dark) .bg-amber-500\/20 { background-color: rgba(217, 119, 6, 0.1) !important; }
+        html:not(.dark) .border-amber-500\/30 { border-color: rgba(217, 119, 6, 0.25) !important; }
+
+        html:not(.dark) .text-teal-400 { color: #0d9488 !important; }
+        html:not(.dark) .bg-teal-500\/20 { background-color: rgba(13, 148, 136, 0.1) !important; }
+        html:not(.dark) .border-teal-500\/30 { border-color: rgba(13, 148, 136, 0.25) !important; }
+
+        html:not(.dark) .text-rose-400 { color: #e11d48 !important; }
+        html:not(.dark) .bg-rose-500\/20 { background-color: rgba(225, 29, 72, 0.1) !important; }
+        html:not(.dark) .border-rose-500\/30 { border-color: rgba(225, 29, 72, 0.25) !important; }
+
+        html:not(.dark) .text-cyan-400 { color: #0891b2 !important; }
+        html:not(.dark) .bg-cyan-500\/20 { background-color: rgba(8, 145, 178, 0.1) !important; }
+        html:not(.dark) .border-cyan-500\/30 { border-color: rgba(8, 145, 178, 0.25) !important; }
+
+        html:not(.dark) .text-indigo-400 { color: #4f46e5 !important; }
+        html:not(.dark) .bg-indigo-500\/20 { background-color: rgba(79, 70, 229, 0.1) !important; }
+        html:not(.dark) .border-indigo-500\/30 { border-color: rgba(79, 70, 229, 0.25) !important; }
+    </style>
+</head>
+<body class="bg-dark-900 text-white font-sans min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full z-50 bg-dark-900/90 backdrop-blur-md border-b border-dark-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <span class="text-yellow-400 font-bold text-xl">💻 Claude Code Deep Dive</span>
+                    <span class="text-gray-500">|</span>
+                    <a href="https://inema.club" target="_blank" class="text-sky-400 hover:underline text-sm font-medium">INEMA.CLUB</a>
+                </div>
+                <button id="theme-toggle" type="button" class="p-2 rounded-lg bg-dark-700 hover:bg-dark-600 transition-colors">
+                    <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"/>
+                    </svg>
+                    <svg id="theme-toggle-light-icon" class="hidden w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="pt-32 pb-16 px-4">
+        <div class="max-w-4xl mx-auto text-center">
+            <div class="text-6xl mb-6">💻</div>
+            <h1 class="text-4xl sm:text-5xl font-extrabold mb-4 bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent">
+                Claude Code Deep Dive
+            </h1>
+            <p class="text-lg sm:text-xl text-gray-400 mb-10 max-w-2xl mx-auto">
+                Uma exploração completa do código-fonte do Claude Code. Análise detalhada de ~1.902 arquivos, da arquitetura central até os recursos ainda não lançados.
+            </p>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-xl mx-auto">
+                <div class="bg-dark-800 rounded-xl p-4 border border-dark-700">
+                    <div class="text-2xl font-bold text-primary">8</div>
+                    <div class="text-sm text-gray-400">Trilhas</div>
+                </div>
+                <div class="bg-dark-800 rounded-xl p-4 border border-dark-700">
+                    <div class="text-2xl font-bold text-primary">50</div>
+                    <div class="text-sm text-gray-400">Lições</div>
+                </div>
+                <div class="bg-dark-800 rounded-xl p-4 border border-dark-700">
+                    <div class="text-2xl font-bold text-primary">~25h</div>
+                    <div class="text-sm text-gray-400">Conteúdo</div>
+                </div>
+                <div class="bg-dark-800 rounded-xl p-4 border border-dark-700">
+                    <div class="text-2xl font-bold text-primary">Avançado</div>
+                    <div class="text-sm text-gray-400">Nível</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tracks Grid -->
+    <section class="pb-20 px-4">
+        <div class="max-w-6xl mx-auto">
+            <h2 class="text-2xl font-bold mb-8 text-center text-gray-300">Trilhas do Curso</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+
+                <!-- T1 - Core Architecture -->
+                <a href="curso/trilha1/index.html" class="group block bg-gradient-to-b from-emerald-900/30 to-dark-800 border border-emerald-500/30 rounded-2xl p-6 hover:scale-[1.03] hover:shadow-lg hover:shadow-emerald-500/10 transition-all duration-300">
+                    <div class="text-4xl mb-3">🏗️</div>
+                    <div class="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-1">Trilha 1</div>
+                    <h3 class="text-lg font-bold text-white mb-2 group-hover:text-emerald-400 transition-colors">Core Architecture</h3>
+                    <div class="flex items-center gap-2">
+                        <span class="bg-emerald-500/20 text-emerald-400 text-xs font-medium px-2.5 py-1 rounded-full">5 módulos</span>
+                    </div>
+                </a>
+
+                <!-- T2 - Tool System -->
+                <a href="curso/trilha2/index.html" class="group block bg-gradient-to-b from-blue-900/30 to-dark-800 border border-blue-500/30 rounded-2xl p-6 hover:scale-[1.03] hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300">
+                    <div class="text-4xl mb-3">🔧</div>
+                    <div class="text-xs font-semibold text-blue-400 uppercase tracking-wider mb-1">Trilha 2</div>
+                    <h3 class="text-lg font-bold text-white mb-2 group-hover:text-blue-400 transition-colors">Tool System</h3>
+                    <div class="flex items-center gap-2">
+                        <span class="bg-blue-500/20 text-blue-400 text-xs font-medium px-2.5 py-1 rounded-full">5 módulos</span>
+                    </div>
+                </a>
+
+                <!-- T3 - Agent Intelligence -->
+                <a href="curso/trilha3/index.html" class="group block bg-gradient-to-b from-purple-900/30 to-dark-800 border border-purple-500/30 rounded-2xl p-6 hover:scale-[1.03] hover:shadow-lg hover:shadow-purple-500/10 transition-all duration-300">
+                    <div class="text-4xl mb-3">🤖</div>
+                    <div class="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-1">Trilha 3</div>
+                    <h3 class="text-lg font-bold text-white mb-2 group-hover:text-purple-400 transition-colors">Agent Intelligence</h3>
+                    <div class="flex items-center gap-2">
+                        <span class="bg-purple-500/20 text-purple-400 text-xs font-medium px-2.5 py-1 rounded-full">6 módulos</span>
+                    </div>
+                </a>
+
+                <!-- T4 - The Interface -->
+                <a href="curso/trilha4/index.html" class="group block bg-gradient-to-b from-amber-900/30 to-dark-800 border border-amber-500/30 rounded-2xl p-6 hover:scale-[1.03] hover:shadow-lg hover:shadow-amber-500/10 transition-all duration-300">
+                    <div class="text-4xl mb-3">🎨</div>
+                    <div class="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-1">Trilha 4</div>
+                    <h3 class="text-lg font-bold text-white mb-2 group-hover:text-amber-400 transition-colors">The Interface</h3>
+                    <div class="flex items-center gap-2">
+                        <span class="bg-amber-500/20 text-amber-400 text-xs font-medium px-2.5 py-1 rounded-full">4 módulos</span>
+                    </div>
+                </a>
+
+                <!-- T5 - Infrastructure -->
+                <a href="curso/trilha5/index.html" class="group block bg-gradient-to-b from-teal-900/30 to-dark-800 border border-teal-500/30 rounded-2xl p-6 hover:scale-[1.03] hover:shadow-lg hover:shadow-teal-500/10 transition-all duration-300">
+                    <div class="text-4xl mb-3">⚙️</div>
+                    <div class="text-xs font-semibold text-teal-400 uppercase tracking-wider mb-1">Trilha 5</div>
+                    <h3 class="text-lg font-bold text-white mb-2 group-hover:text-teal-400 transition-colors">Infrastructure</h3>
+                    <div class="flex items-center gap-2">
+                        <span class="bg-teal-500/20 text-teal-400 text-xs font-medium px-2.5 py-1 rounded-full">9 módulos</span>
+                    </div>
+                </a>
+
+                <!-- T6 - Connectivity -->
+                <a href="curso/trilha6/index.html" class="group block bg-gradient-to-b from-rose-900/30 to-dark-800 border border-rose-500/30 rounded-2xl p-6 hover:scale-[1.03] hover:shadow-lg hover:shadow-rose-500/10 transition-all duration-300">
+                    <div class="text-4xl mb-3">🌐</div>
+                    <div class="text-xs font-semibold text-rose-400 uppercase tracking-wider mb-1">Trilha 6</div>
+                    <h3 class="text-lg font-bold text-white mb-2 group-hover:text-rose-400 transition-colors">Connectivity</h3>
+                    <div class="flex items-center gap-2">
+                        <span class="bg-rose-500/20 text-rose-400 text-xs font-medium px-2.5 py-1 rounded-full">6 módulos</span>
+                    </div>
+                </a>
+
+                <!-- T7 - Unreleased Features -->
+                <a href="curso/trilha7/index.html" class="group block bg-gradient-to-b from-cyan-900/30 to-dark-800 border border-cyan-500/30 rounded-2xl p-6 hover:scale-[1.03] hover:shadow-lg hover:shadow-cyan-500/10 transition-all duration-300">
+                    <div class="text-4xl mb-3">🔮</div>
+                    <div class="text-xs font-semibold text-cyan-400 uppercase tracking-wider mb-1">Trilha 7</div>
+                    <h3 class="text-lg font-bold text-white mb-2 group-hover:text-cyan-400 transition-colors">Unreleased Features</h3>
+                    <div class="flex items-center gap-2">
+                        <span class="bg-cyan-500/20 text-cyan-400 text-xs font-medium px-2.5 py-1 rounded-full">6 módulos</span>
+                    </div>
+                </a>
+
+                <!-- T8 - The Big Picture -->
+                <a href="curso/trilha8/index.html" class="group block bg-gradient-to-b from-indigo-900/30 to-dark-800 border border-indigo-500/30 rounded-2xl p-6 hover:scale-[1.03] hover:shadow-lg hover:shadow-indigo-500/10 transition-all duration-300">
+                    <div class="text-4xl mb-3">🗺️</div>
+                    <div class="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-1">Trilha 8</div>
+                    <h3 class="text-lg font-bold text-white mb-2 group-hover:text-indigo-400 transition-colors">The Big Picture</h3>
+                    <div class="flex items-center gap-2">
+                        <span class="bg-indigo-500/20 text-indigo-400 text-xs font-medium px-2.5 py-1 rounded-full">5 módulos</span>
+                    </div>
+                </a>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-dark-700 py-8 px-4">
+        <div class="max-w-6xl mx-auto text-center text-gray-500 text-sm">
+            <p>Feito com dedicação por <a href="https://inema.club" target="_blank" class="text-sky-400 hover:underline">INEMA.CLUB</a></p>
+        </div>
+    </footer>
+
+    <!-- Theme Toggle Script -->
+    <script>
+        const toggle = document.getElementById('theme-toggle');
+        const html = document.documentElement;
+        const darkIcon = document.getElementById('theme-toggle-dark-icon');
+        const lightIcon = document.getElementById('theme-toggle-light-icon');
+        if (localStorage.getItem('color-theme') === 'light') { html.classList.remove('dark'); lightIcon.classList.remove('hidden'); } else { darkIcon.classList.remove('hidden'); }
+        toggle.addEventListener('click', function() {
+            darkIcon.classList.toggle('hidden'); lightIcon.classList.toggle('hidden');
+            if (html.classList.contains('dark')) { html.classList.remove('dark'); localStorage.setItem('color-theme', 'light'); } else { html.classList.add('dark'); localStorage.setItem('color-theme', 'dark'); }
+        });
+    </script>
+
+</body>
+</html>
