@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T2 Tool System - Claude Code Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: { 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a' },
+                        dark: { 800: '#1e293b', 900: '#0f172a', 950: '#020617' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html.light { background: #f8fafc; color: #1e293b; }
+        html.light .dark\:bg-dark-950 { background: #f8fafc !important; }
+        html.light .dark\:bg-dark-900 { background: #ffffff !important; }
+        html.light .dark\:bg-dark-800 { background: #f1f5f9 !important; }
+        html.light .dark\:bg-dark-900\/50 { background: rgba(255,255,255,0.8) !important; }
+        html.light .dark\:bg-dark-800\/50 { background: rgba(241,245,249,0.8) !important; }
+        html.light .dark\:text-white { color: #1e293b !important; }
+        html.light .dark\:text-gray-100 { color: #334155 !important; }
+        html.light .dark\:text-gray-300 { color: #475569 !important; }
+        html.light .dark\:text-gray-400 { color: #64748b !important; }
+        html.light .dark\:text-gray-500 { color: #94a3b8 !important; }
+        html.light .dark\:border-gray-700 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-800 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-700\/50 { border-color: rgba(226,232,240,0.5) !important; }
+        html.light .text-blue-400 { color: #2563eb !important; }
+        html.light .text-blue-500 { color: #1d4ed8 !important; }
+        html.light .bg-blue-500\/10 { background: rgba(37,99,235,0.08) !important; }
+        html.light .bg-blue-500\/20 { background: rgba(37,99,235,0.12) !important; }
+        html.light .border-blue-500\/30 { border-color: rgba(37,99,235,0.2) !important; }
+        html.light .from-blue-900\/30 { --tw-gradient-from: rgba(37,99,235,0.08) !important; }
+        html.light .dark\:bg-gradient-to-b { background: #f8fafc !important; }
+        html.light nav { background: rgba(255,255,255,0.85) !important; border-bottom: 1px solid #e2e8f0 !important; }
+        html.light .dark\:hover\:bg-dark-800:hover { background: #e2e8f0 !important; }
+    </style>
+</head>
+<body class="dark:bg-dark-950 dark:text-white font-sans min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-40 backdrop-blur-xl dark:bg-dark-900/50 border-b dark:border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
+            <a href="../../index.html" class="text-yellow-400 font-bold text-lg whitespace-nowrap">&#x1F4BB; Claude Code Deep Dive</a>
+            <span class="dark:text-gray-600">|</span>
+            <a href="https://inema.club" target="_blank" class="text-sky-400 text-sm font-medium hover:underline">INEMA.CLUB</a>
+            <div class="flex items-center gap-1 ml-auto flex-wrap">
+                <a href="../trilha1/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Core Architecture</span><span class="md:hidden">T1</span></a>
+                <a href="../trilha2/" class="px-2 py-1 text-xs font-bold rounded bg-blue-500/20 text-blue-400 border border-blue-500/30"><span class="hidden md:inline">Tool System</span><span class="md:hidden">T2</span></a>
+                <a href="../trilha3/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Agent Intelligence</span><span class="md:hidden">T3</span></a>
+                <a href="../trilha4/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Interface</span><span class="md:hidden">T4</span></a>
+                <a href="../trilha5/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Infrastructure</span><span class="md:hidden">T5</span></a>
+                <a href="../trilha6/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Connectivity</span><span class="md:hidden">T6</span></a>
+                <a href="../trilha7/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Unreleased Features</span><span class="md:hidden">T7</span></a>
+                <a href="../trilha8/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Big Picture</span><span class="md:hidden">T8</span></a>
+                <button onclick="toggleTheme()" class="ml-2 p-2 rounded-lg dark:hover:bg-dark-800 dark:text-gray-400" title="Alternar tema">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Header -->
+    <header class="bg-gradient-to-b from-blue-900/30 to-transparent py-16 px-4">
+        <div class="max-w-5xl mx-auto text-center">
+            <span class="inline-block px-3 py-1 text-xs font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 rounded-full border border-blue-500/30 mb-4">TRILHA 2</span>
+            <h1 class="text-4xl md:text-5xl font-extrabold mb-4">&#x1F527; Tool System</h1>
+            <p class="text-lg dark:text-gray-300 max-w-2xl mx-auto mb-8">Domine a interface Tool, o pipeline de execucao, o Bash Tool com seus 23 validators, as File Tools (Read/Write/Edit) e as Search Tools (Glob &amp; Grep) ate a integracao MCP.</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-xl mx-auto">
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-blue-400">5</div>
+                    <div class="text-xs dark:text-gray-400">Modulos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-blue-400">~30</div>
+                    <div class="text-xs dark:text-gray-400">Topicos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-blue-400">~4h</div>
+                    <div class="text-xs dark:text-gray-400">Duracao</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-blue-400">Avancado</div>
+                    <div class="text-xs dark:text-gray-400">Nivel</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 pb-20">
+
+        <!-- Quick Nav -->
+        <section class="mb-16">
+            <h2 class="text-xl font-bold mb-6 dark:text-gray-100">Navegacao Rapida</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <a href="#mod-2-1" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-blue-500/50 transition-colors block">
+                    <span class="text-blue-400 font-mono text-sm">2.1</span> &#x1F527; The Tool System
+                </a>
+                <a href="#mod-2-2" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-blue-500/50 transition-colors block">
+                    <span class="text-blue-400 font-mono text-sm">2.2</span> &#x1F4BB; The Bash Tool
+                </a>
+                <a href="#mod-2-3" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-blue-500/50 transition-colors block">
+                    <span class="text-blue-400 font-mono text-sm">2.3</span> &#x1F4C4; File Tools (Read, Write, Edit)
+                </a>
+                <a href="#mod-2-4" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-blue-500/50 transition-colors block">
+                    <span class="text-blue-400 font-mono text-sm">2.4</span> &#x1F50D; Search Tools (Glob &amp; Grep)
+                </a>
+                <a href="#mod-2-5" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-blue-500/50 transition-colors block">
+                    <span class="text-blue-400 font-mono text-sm">2.5</span> &#x1F50C; MCP Integration
+                </a>
+            </div>
+        </section>
+
+        <!-- Module 2.1 -->
+        <section id="mod-2-1" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-blue-400 font-mono text-sm font-bold">2.1</span>
+                        <span class="text-xs dark:text-gray-500">~50 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">The Tool System</h3>
+                    <p class="dark:text-gray-400 text-sm">A interface Tool, o pipeline de registro e filtragem, orquestracao de concorrencia, permissoes e o fluxo completo de execucao.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <!-- Topic 1 -->
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F527; The Tool Interface (Tool.ts)</div>
+                                <div class="text-xs dark:text-gray-500">Protocol contract, inputSchema, call, permissions</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> A interface Tool&lt;Input, Output, P&gt; e um protocol contract TypeScript que toda ferramenta deve satisfazer. Define name, aliases, inputSchema (Zod), call(), checkPermissions(), isConcurrencySafe() e isReadOnly().</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> Cada capacidade do Claude Code e uma Tool. Entender a interface e fundamental para criar, customizar ou debugar qualquer ferramenta.</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> Structural typing (protocol, not class), Zod schema validation, ToolResult with contextModifier, renderToolUseMessage/renderToolResultMessage UI hooks, interruptBehavior.</div>
+                        </div>
+                    </div>
+                    <!-- Topic 2 -->
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F3ED; buildTool() Factory &amp; Fail-Closed Defaults</div>
+                                <div class="text-xs dark:text-gray-500">Defaults conservadores, BuiltTool type magic</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> buildTool() merge um ToolDef parcial com defaults seguros (fail-closed): isConcurrencySafe=false, isReadOnly=false, isDestructive=false. O tipo BuiltTool&lt;D&gt; preserva tipos literais da definicao.</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> Entender os defaults fail-closed explica por que ferramentas custom rodam serialmente por padrao e como opt-in para concorrencia.</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> TOOL_DEFAULTS, fail-closed philosophy, TypeScript spread at type level, checkPermissions default (allow, defer to general system).</div>
+                        </div>
+                    </div>
+                    <!-- Topic 3 -->
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4E6; Three-Tier Registration Pipeline</div>
+                                <div class="text-xs dark:text-gray-500">getAllBaseTools, getTools, assembleToolPool</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> Pipeline de tres camadas: getAllBaseTools() (catalogo exaustivo com feature flags), getTools() (filtragem por modo e deny rules), assembleToolPool() (built-ins + MCP, sorted para cache stability).</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> O pipeline de registro determina quais ferramentas o modelo ve. Entende-lo e essencial para debugging de ferramentas ausentes ou MCP tools nao aparecendo.</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> Feature flags gate tools at load time, deny rules filter before model sees them, MCP tools sorted as separate alphabetical suffix for prompt-cache stability.</div>
+                        </div>
+                    </div>
+                    <!-- Topic 4 -->
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F504; Orchestration &amp; Concurrency</div>
+                                <div class="text-xs dark:text-gray-500">partitionToolCalls, concurrent vs serial batches</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> O orchestrator usa partitionToolCalls() para decidir quais tools rodam em paralelo e quais serialmente. isConcurrencySafe(input) e avaliado per-call, nao per-tool-type. Concurrency ceiling default: 10.</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> Concorrencia data-driven e o que permite Bash(ls) rodar paralelo enquanto Bash(rm -rf) roda serial. Entender o particionamento previne bugs de state mutation.</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> partitionToolCalls algorithm, contextModifier dance (serial immediate, concurrent queued), all() async-generator combinator, CLAUDE_CODE_MAX_TOOL_USE_CONCURRENCY.</div>
+                        </div>
+                    </div>
+                    <!-- Topic 5 -->
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x26A1; StreamingToolExecutor</div>
+                                <div class="text-xs dark:text-gray-500">Real-time execution, sibling abort, in-order emission</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> StreamingToolExecutor inicia tools enquanto blocos ainda stream da API. Tool lifecycle: queued -> executing -> completed -> yielded. Apenas erros de Bash abortam siblings. Resultados emitidos na ordem do modelo.</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> E o executor usado em producao. Entender sibling abort e in-order emission e critico para debugging de ferramentas paralelas.</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> canExecuteTool() concurrency guard, siblingAbortController (Bash-only cascade), progress messages emitted immediately, getRemainingResults() in insertion order.</div>
+                        </div>
+                    </div>
+                    <!-- Topic 6 -->
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F6E1;&#xFE0F; Permission Context &amp; Execution Pipeline</div>
+                                <div class="text-xs dark:text-gray-500">checkPermissionsAndCallTool, DeepImmutable, Zod validation</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> O pipeline completo: Zod validation -> semantic validation -> speculative classifier -> backfillObservableInput (clone) -> PreToolUse hooks -> canUseTool() -> tool.call() -> PostToolUse hooks -> result serialization. ToolPermissionContext e DeepImmutable.</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> O pipeline de execucao e o caminho critico de seguranca. Cada etapa tem razao de existir, incluindo _simulatedSedEdit stripping como defense-in-depth.</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> DeepImmutable permission context, three input copies (API-bound, observable clone, hook-updated), filterToolsByDenyRules, Stream multiplexing progress+results.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-2-1')" class="px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-2-1.html" class="px-4 py-2 text-blue-400 border border-blue-500/30 rounded-lg text-sm font-medium hover:bg-blue-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Module 2.2 -->
+        <section id="mod-2-2" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-blue-400 font-mono text-sm font-bold">2.2</span>
+                        <span class="text-xs dark:text-gray-500">~60 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">The Bash Tool</h3>
+                    <p class="dark:text-gray-400 text-sm">O gateway do sistema operacional: 7 camadas de processamento, 23 security validators, shell snapshot, sandboxing e output handling.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4BB; Architecture &amp; Command Pipeline</div>
+                                <div class="text-xs dark:text-gray-500">7 layers antes do spawn, buildExecCommand()</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> O Bash Tool processa comandos por 7 camadas antes do subprocess spawn: input validation, permission checking, command building (6 estagios incluindo shell quoting e pipe rearrangement), e output streaming.</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> Todo comando shell passa por este pipeline. Entender cada camada e essencial para diagnosticar falhas de permissao e comportamentos inesperados.</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> buildExecCommand() 6 stages, eval quoting for alias availability, pipe rearrangement fix, extglob disabling, stdin redirect decision.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F6E1;&#xFE0F; The 23 Security Validators</div>
+                                <div class="text-xs dark:text-gray-500">bashCommandIsSafe(), allow/passthrough/ask chain</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> Cadeia de 23 validators em bashCommandIsSafe(), cada um retornando allow, passthrough ou ask. Cobrem: shell metacharacters, dangerous variables, obfuscated flags, unicode whitespace, brace expansion, ZSH-specific commands e mais.</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> Os validators formam defense-in-depth contra injection em niveis de character encoding, shell syntax e Zsh-specific. Sao a fronteira de seguranca real.</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> Five pre-computed command views (originalCommand, baseCommand, unquotedContent, fullyUnquotedContent, unquotedKeepQuoteChars), safe heredoc early-allow, 50-subcommand cap.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4F8; Shell Snapshot System</div>
+                                <div class="text-xs dark:text-gray-500">Aliases, functions, PATH capturados uma vez por sessao</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> Cada sessao captura o ambiente shell interativo em um snapshot file: aliases, functions, shell options, PATH e ripgrep shim embarcado. Graceful degradation: se falhar, usa login shell com flag -l.</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> O snapshot elimina a necessidade de login shell por comando, reduzindo latencia significativamente. Entender o fallback ajuda a diagnosticar aliases ausentes.</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> ~/.claude/shell-snapshots/, TOCTOU awareness (access() before each command), filtered completion functions, graceful degradation to -l flag.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F512; Permission Plumbing &amp; Sandboxing</div>
+                                <div class="text-xs dark:text-gray-500">bashToolHasPermission(), SandboxManager, rule matching</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> checkPermissions() chama bashToolHasPermission() com 6 checks independentes. SandboxManager controla filesystem read/write e network. Tres modos de rule matching: exact, prefix (cmd:*) e wildcard.</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> Sandbox exclusions sao convenience features, NAO controles de seguranca. O dialogo de permissao e a fronteira real. Entender isso previne falsa sensacao de seguranca.</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> stripSafeWrappers() two-phase (env vars + wrapper commands), auto-generated prefix rules (2-word extraction), dangerouslyDisableSandbox policy check.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x23F3; Background Execution &amp; Output Handling</div>
+                                <div class="text-xs dark:text-gray-500">3 paths de background, size limits, image detection</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> Tres caminhos de background execution: run_in_background (model-initiated), Ctrl+B (user), auto-background (15s timeout). Output limitado a 30KB inline (150KB hard cap). Deteccao automatica de imagens base64.</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> Entender os tres paths de background e os limites de output previne confusao quando comandos longos sao cortados ou movidos para background.</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> backgroundTaskId, semantic exit code interpretation (grep 1 = no matches), Claude Code Hints protocol (zero-token side channel), BASH_SILENT_COMMANDS (mv,cp,rm show "Done").</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F3AF; UI Classification &amp; Sed Special Case</div>
+                                <div class="text-xs dark:text-gray-500">Collapse behavior, pipeline classification, sed-as-edit</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> Comandos classificados para UI collapse: search/read/list commands colapsaveis. Pipelines so colapsam se TODAS as partes forem search/read. Sed -i renderiza como file-edit com diff-style permission dialog.</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> A classificacao UI impacta a experiencia do usuario. Entender por que certos comandos colapsam e outros nao ajuda a customizar o comportamento.</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> BASH_SEARCH_COMMANDS, BASH_READ_COMMANDS, BASH_LIST_COMMANDS, semantic-neutral commands (echo, printf), BASH_SILENT_COMMANDS, sed FileEdit display name.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-2-2')" class="px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-2-2.html" class="px-4 py-2 text-blue-400 border border-blue-500/30 rounded-lg text-sm font-medium hover:bg-blue-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Module 2.3 -->
+        <section id="mod-2-3" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-blue-400 font-mono text-sm font-bold">2.3</span>
+                        <span class="text-xs dark:text-gray-500">~50 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">File Tools (Read, Write, Edit)</h3>
+                    <p class="dark:text-gray-400 text-sm">Tres ferramentas de manipulacao de arquivo com um invariante compartilhado: toda escrita requer leitura previa. Dedup, quote normalization e staleness checks.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4D6; Read Tool Deep-Dive</div>
+                                <div class="text-xs dark:text-gray-500">Pagination, token limits, image/PDF/notebook support</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> Read suporta text, images (PNG/JPG/GIF/WebP com resize via sharp), PDFs (pages parameter, max 20 pages) e Jupyter notebooks. Token limit de 25K com two-stage gate (rough estimate + exact count). Dedup retorna stub de ~100 bytes quando arquivo nao mudou (~18% hit rate).</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> Read e a unica tool read-only e concurrency-safe. Seu sistema de dedup economiza milhares de tokens por sessao. Entender os limites previne erros de "file too large".</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> readFileState mtime check, MaxFileReadTokenExceededError (throw not truncate), 256KB size gate, blocked device paths (/dev/zero, /dev/random), macOS thin space retry.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x270F;&#xFE0F; Write Tool Deep-Dive</div>
+                                <div class="text-xs dark:text-gray-500">Read-before-write gate, atomic write, LF policy</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> Write cria ou sobrescreve arquivos inteiros. Requer Read previa completa (nao parcial). Sequencia atomica: mkdir -> backup -> sync read + staleness check -> write. Sempre usa LF line endings. LSP notifications (didChange + didSave) apos escrita.</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> O gate read-before-write e a protecao principal contra sobrescrita acidental. Entender os tres error codes (2: no read, 2: partial read, 3: file modified) acelera debugging.</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> readFileState check, errorCode 2 vs 3, Windows mtime content-comparison fallback, CLAUDE.md telemetry, skill discovery on write.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x2702;&#xFE0F; Edit Tool &amp; Quote Normalization</div>
+                                <div class="text-xs dark:text-gray-500">Exact string replacement, curly quotes, desanitization</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> Edit faz substring match exato com replace. Se >1 match, recusa (error 9) a menos que replace_all:true. findActualString() normaliza curly quotes para match. preserveQuoteStyle() mantem tipografia original. Desanitization table reverte tokens sanitizados pela API.</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> Edit e a ferramenta mais eficiente para mudancas cirurgicas. Quote normalization e o motivo pelo qual funciona mesmo com curly quotes em arquivos.</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> normalizeQuotes() (U+2018/2019/201C/201D), contraction detection (/\\p{L}/u), old_string="" creates new file, trailing whitespace stripping (except .md/.mdx).</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F504; The Read-Before-Write Contract</div>
+                                <div class="text-xs dark:text-gray-500">4 fases, double staleness check, race window</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> Contrato em 4 fases: Read armazena em readFileState -> validateInput() rejeita se nao lido/parcial/stale -> call() roda staleness check sincrono (fecha race window) -> Write/Edit atualiza readFileState. Dois checks de staleness (validateInput + call) fecham a janela de corrida.</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> Gotcha mais comum: linter/formatter modifica arquivo entre Read e Write, disparando erro "file has been modified since read". Re-read resolve.</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> Double staleness check (pre-permission + atomic in call), isPartialView flag, Windows content-comparison fallback, FILE_UNEXPECTEDLY_MODIFIED_ERROR.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4CA; Write vs Edit: When to Use Each</div>
+                                <div class="text-xs dark:text-gray-500">Token cost comparison, use cases</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> Edit envia ~20 chars para uma mudanca cirurgica; Write envia o arquivo inteiro. Write para: novo arquivo, rewrite completo, mudancas extensas. Edit para: tudo mais. A economia de tokens e dramatica em arquivos grandes.</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> Escolher a ferramenta errada desperica tokens e aumenta latencia. A regra simples: se o arquivo existe e a mudanca e pequena, use Edit.</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> Token cost: Edit ~20 chars vs Write entire file, new file creation, structural rewrites, unique old_string requirement.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F50F; Limits Precedence &amp; Dedup System</div>
+                                <div class="text-xs dark:text-gray-500">Env var > GrowthBook > default, mtime-based dedup</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> Token/byte limits seguem chain de 3 niveis: env var > GrowthBook flag > hardcoded default (25K tokens / 256KB). Memoized na primeira chamada. Dedup de Read: se mtime igual, retorna stub. Apenas Read-originated entries participam do dedup.</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> Saber como overridar limites e essencial para projetos com arquivos grandes. O dedup economiza ~18% de re-reads desnecessarios.</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> CLAUDE_CODE_FILE_READ_MAX_OUTPUT_TOKENS, tengu_amber_wren GrowthBook flag, file_unchanged stub type, Edit/Write entries excluded from dedup.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-2-3')" class="px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-2-3.html" class="px-4 py-2 text-blue-400 border border-blue-500/30 rounded-lg text-sm font-medium hover:bg-blue-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Module 2.4 -->
+        <section id="mod-2-4" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-blue-400 font-mono text-sm font-bold">2.4</span>
+                        <span class="text-xs dark:text-gray-500">~45 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">Search Tools (Glob &amp; Grep)</h3>
+                    <p class="dark:text-gray-400 text-sm">Ambas delegam para ripgrep: Glob busca nomes de arquivo, Grep busca conteudo. Tres output modes, pagination, e resolucao de binario em tres camadas.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F50D; Glob Delegates to ripgrep</div>
+                                <div class="text-xs dark:text-gray-500">--files --glob, absolute path decomposition</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> Glob NAO usa JavaScript glob libraries. Delega para ripgrep com --files --glob. Patterns absolutos sao decompostos por extractGlobBaseDirectory() em baseDir + relativePattern. Ignora .gitignore por default (Claude precisa ver build artifacts).</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> Saber que Glob e ripgrep explica sua performance em codebases gigantes e por que .gitignore e ignorado por padrao.</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> extractGlobBaseDirectory(), CLAUDE_CODE_GLOB_NO_IGNORE, CLAUDE_CODE_GLOB_HIDDEN, --sort=modified, 100 file limit (globLimits).</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4CB; Grep's Three Output Modes</div>
+                                <div class="text-xs dark:text-gray-500">files_with_matches, content, count</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> Tres modos = tres invocacoes ripgrep distintas: files_with_matches (rg -l, paths only, sorted by mtime), content (matching lines com context -B/-A/-C), count (rg -c, match counts per file).</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> Escolher o modo correto evita trabalho desnecessario. files_with_matches para "quais arquivos?", content para "quais linhas?", count para "quantas vezes?".</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> mtime sort in files_with_matches (most recent first), test mode uses filename sort, line numbers only in content mode, context flags precedence (-C supersedes -B/-A).</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4C4; Pagination: head_limit &amp; offset</div>
+                                <div class="text-xs dark:text-gray-500">Default 250, unlimited escape hatch, 20KB persist threshold</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> Ambas ferramentas suportam head_limit (default 250) e offset como tail -n +N | head -N. head_limit=0 e o escape hatch para ilimitado. Head-limiting acontece ANTES de path relativization (otimizacao: evita processar 10K linhas descartadas).</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> O default de 250 mantem resultados sob o threshold de 20KB persist. Saber paginar e essencial para buscas amplas.</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> applyHeadLimit() with appliedLimit hint, truncation annotation in tool result, head_limit=0 unlimited, 20KB persist threshold (~6-24K tokens/grep-heavy session).</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x2699;&#xFE0F; ripgrep Binary Resolution</div>
+                                <div class="text-xs dark:text-gray-500">system -> embedded -> builtin, memoized, security</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> Resolucao em tres modos memoizada: system (rg do PATH, usa nome "rg" nao path resolvido contra PATH hijacking), embedded (Bun, argv0='rg'), builtin (vendor/ripgrep/). macOS code-signing automatico para builtin.</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> O detalhe de seguranca e sutil: usar "rg" em vez do path resolvido previne execucao de ./rg.exe malicioso. Entender os tres modos ajuda debugging de "ripgrep not found".</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> getRipgrepConfig() memoized factory, USE_BUILTIN_RIPGREP env var, macOS codesign --sign - (ad-hoc), spawn vs execFile (argv0 support).</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x26A1; Performance Architecture</div>
+                                <div class="text-xs dark:text-gray-500">Timeouts, EAGAIN retry, buffer cap, path relativization</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> Timeouts platform-aware: 20s padrao, 60s WSL. EAGAIN retry com -j 1 (single thread) para uma unica chamada, nao persistido globalmente. Buffer cap 20MB. Path relativization economiza centenas de tokens por chamada. Line length cap: 500 chars.</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> Performance tuning e essencial em monorepos grandes. O retry EAGAIN scoped evita regressao que o retry global causava.</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> CLAUDE_CODE_GLOB_TIMEOUT_SECONDS, SIGTERM -> SIGKILL 5s escalation, ripGrepFileCount streaming counter, --max-columns 500, VCS directory exclusions.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F6E1;&#xFE0F; Pattern Safety &amp; UNC Path Security</div>
+                                <div class="text-xs dark:text-gray-500">Leading-dash problem, NTLM leak prevention, glob parsing</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> Patterns comecando com dash usam -e flag para prevenir interpretacao como flag do ripgrep. UNC paths (\\, //) skipam stat() para prevenir NTLM credential leaks via SMB handshake. Glob patterns com braces tratados como padrao unico.</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> A classe de vulnerabilidade leading-dash e comum em tools que fazem shell-out. A protecao UNC e critica em ambientes Windows/network.</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> -e pattern flag, UNC NTLM credential leak prevention, brace pattern detection (*.{ts,tsx}), type parameter vs glob (--type more efficient), isConcurrencySafe()=true for both.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-2-4')" class="px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-2-4.html" class="px-4 py-2 text-blue-400 border border-blue-500/30 rounded-lg text-sm font-medium hover:bg-blue-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Module 2.5 -->
+        <section id="mod-2-5" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-blue-400 font-mono text-sm font-bold">2.5</span>
+                        <span class="text-xs dark:text-gray-500">~55 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">MCP Integration</h3>
+                    <p class="dark:text-gray-400 text-sm">Model Context Protocol: 8 transports, 7-layer config cascade, OAuth com PKCE, tool proxying, elicitation e deduplication baseada em conteudo.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F50C; Transport Types &amp; Architecture</div>
+                                <div class="text-xs dark:text-gray-500">8 transports: stdio, sse, http, ws, ide, sdk, in-process</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> 8 tipos de transport: stdio (subprocess stdin/stdout), sse (HTTP SSE com OAuth), http (Streamable HTTP, MCP 2025-03-26), ws (WebSocket), sse-ide/ws-ide (IDE extensions), sdk (control-message bridge), in-process (Chrome MCP/Computer Use via queueMicrotask).</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> Cada transport tem requisitos de setup distintos. Saber qual usar para cada cenario (local, remoto, IDE, plugin) e essencial para integracoes MCP.</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> InProcessTransport (createLinkedTransportPair), stdio stderr piped/capped 64MB, sse GET skip 60s timeout (long-lived streams), ws protocols: ['mcp'].</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4CB; 7-Layer Config Scope Cascade</div>
+                                <div class="text-xs dark:text-gray-500">enterprise > dynamic > claudeai > project > local > user > managed</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> Configs MCP mergem de 7 fontes com precedencia estrita: enterprise (managed-mcp.json, bloqueia tudo), dynamic (--mcp-config), claudeai (connector API), project (.mcp.json), local (~/.claude/projects/), user (~/.claude/settings.json), managed (plugins).</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> Enterprise lock bloqueia completamente add/remove manual. Saber a cascade resolve conflitos de configuracao e entende por que um server nao aparece.</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> Enterprise Lock ("exclusive control"), .mcp.json walks directory tree (child overrides parent), env var expansion ($VAR), allowedMcpServers/deniedMcpServers policy.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F517; Connection Lifecycle &amp; State Machine</div>
+                                <div class="text-xs dark:text-gray-500">Batched connection, timeout race, capability negotiation</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> Lifecycle em 8 etapas: config assembly -> batched connection (stdio:3, remote:20) -> transport construction -> client.connect() with 30s timeout race -> auth handling (401 -> needs-auth) -> capability negotiation -> tool/resource/prompt fetch -> live notifications.</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> O timeout race e batched connection sao criticos para startup performance. Entender o estado needs-auth explica o pseudo-tool McpAuthTool.</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> Promise.race([connectPromise, timeoutPromise]), MCP_TIMEOUT env var, exponential backoff reconnect (1s -> 30s cap, max 5), ToolListChanged/ResourceListChanged notifications.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F3AD; Tool Proxying &amp; MCPTool</div>
+                                <div class="text-xs dark:text-gray-500">Name normalization, description cap, result handling</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> MCPTool e um template clonado para cada tool de cada server. Nomes normalizados como mcp__server__tool. Descricoes hard-capped em 2048 chars. Resultados com imagens sao resized, blobs binarios persistidos em disco, resultados >100KB truncados.</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> O cap de 2048 chars previne explosion de contexto de servers OpenAPI. Entender name normalization e essencial para permission rules.</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> normalizeNameForMCP (non-alphanumeric -> underscore), buildMcpToolName(), image resize/downsample, binary blob persistence, 100KB truncation threshold.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F510; OAuth Authentication &amp; McpAuthTool</div>
+                                <div class="text-xs dark:text-gray-500">PKCE flow, model-triggered auth, Slack quirk, XAA</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> OAuth completo com PKCE: 401 -> needs-auth state -> McpAuthTool pseudo-tool injected -> model triggers auth -> browser opens -> callback fires -> tokens stored in keychain -> reconnect with real tools. Slack returns 200 com error body, normalizado para 400.</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> OAuth model-triggered e unico do Claude Code. Entender o fluxo McpAuthTool -> real tools swap previne confusao quando servers requerem auth.</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> McpAuthTool pseudo-tool, prefix-based replacement on AppState, Slack 200-error normalization, XAA cross-app access (SSO without browser), 15-min needs-auth cache.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4E1; Elicitation &amp; Deduplication</div>
+                                <div class="text-xs dark:text-gray-500">Form/URL modes, content-based dedup, CCR proxy unwrapping</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-blue-400">O que e:</strong> Elicitation: servers pedem input estruturado mid-operation (form mode com JSON Schema ou URL mode). Dedup baseado em content signature (nao nome): stdio:["cmd","arg1"] ou url:https://... CCR proxy unwrapping preserva URL original para comparacao.</div>
+                            <div><strong class="text-blue-400">Por que aprender:</strong> Dedup content-based previne duplicatas quando o mesmo server aparece em multiplas fontes. Elicitation permite interacoes ricas com servers MCP.</div>
+                            <div><strong class="text-blue-400">Conceitos-chave:</strong> ElicitationRequestEvent with respond() callback, hooks can satisfy requests programmatically, manual wins over plugin, first plugin wins, enabled manual wins over claude.ai.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-2-5')" class="px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-2-5.html" class="px-4 py-2 text-blue-400 border border-blue-500/30 rounded-lg text-sm font-medium hover:bg-blue-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modals -->
+    <div id="modal-2-1" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-2-1')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-2-1')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-2-1.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+    <div id="modal-2-2" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-2-2')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-2-2')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-2-2.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+    <div id="modal-2-3" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-2-3')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-2-3')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-2-3.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+    <div id="modal-2-4" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-2-4')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-2-4')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-2-4.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+    <div id="modal-2-5" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-2-5')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-2-5')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-2-5.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+
+    <script>
+        function toggleTopic(el) {
+            const content = el.querySelector('.topic-content');
+            const section = el.closest('.divide-y');
+            if (!content) return;
+            const wasHidden = content.classList.contains('hidden');
+            section.querySelectorAll('.topic-content').forEach(c => c.classList.add('hidden'));
+            if (wasHidden) content.classList.remove('hidden');
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.classList.contains('dark');
+            html.classList.toggle('dark', !isDark);
+            html.classList.toggle('light', isDark);
+            localStorage.setItem('theme', isDark ? 'light' : 'dark');
+        }
+
+        (function() {
+            const saved = localStorage.getItem('theme');
+            if (saved === 'light') {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+            }
+        })();
+    </script>
+</body>
+</html>

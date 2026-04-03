@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T3 Agent Intelligence - Claude Code Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: { 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95' },
+                        dark: { 800: '#1e293b', 900: '#0f172a', 950: '#020617' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html.light { background: #f8fafc; color: #1e293b; }
+        html.light .dark\:bg-dark-950 { background: #f8fafc !important; }
+        html.light .dark\:bg-dark-900 { background: #ffffff !important; }
+        html.light .dark\:bg-dark-800 { background: #f1f5f9 !important; }
+        html.light .dark\:bg-dark-900\/50 { background: rgba(255,255,255,0.8) !important; }
+        html.light .dark\:bg-dark-800\/50 { background: rgba(241,245,249,0.8) !important; }
+        html.light .dark\:text-white { color: #1e293b !important; }
+        html.light .dark\:text-gray-100 { color: #334155 !important; }
+        html.light .dark\:text-gray-300 { color: #475569 !important; }
+        html.light .dark\:text-gray-400 { color: #64748b !important; }
+        html.light .dark\:text-gray-500 { color: #94a3b8 !important; }
+        html.light .dark\:border-gray-700 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-800 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-700\/50 { border-color: rgba(226,232,240,0.5) !important; }
+        html.light .text-purple-400 { color: #7c3aed !important; }
+        html.light .text-purple-500 { color: #6d28d9 !important; }
+        html.light .bg-purple-500\/10 { background: rgba(124,58,237,0.08) !important; }
+        html.light .bg-purple-500\/20 { background: rgba(124,58,237,0.12) !important; }
+        html.light .border-purple-500\/30 { border-color: rgba(124,58,237,0.2) !important; }
+        html.light .from-purple-900\/30 { --tw-gradient-from: rgba(124,58,237,0.08) !important; }
+        html.light .dark\:bg-gradient-to-b { background: #f8fafc !important; }
+        html.light nav { background: rgba(255,255,255,0.85) !important; border-bottom: 1px solid #e2e8f0 !important; }
+        html.light .dark\:hover\:bg-dark-800:hover { background: #e2e8f0 !important; }
+    </style>
+</head>
+<body class="dark:bg-dark-950 dark:text-white font-sans min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-40 backdrop-blur-xl dark:bg-dark-900/50 border-b dark:border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
+            <a href="../../index.html" class="text-yellow-400 font-bold text-lg whitespace-nowrap">&#x1F4BB; Claude Code Deep Dive</a>
+            <span class="dark:text-gray-600">|</span>
+            <a href="https://inema.club" target="_blank" class="text-sky-400 text-sm font-medium hover:underline">INEMA.CLUB</a>
+            <div class="flex items-center gap-1 ml-auto flex-wrap">
+                <a href="../trilha1/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Core Architecture</span><span class="md:hidden">T1</span></a>
+                <a href="../trilha2/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Tool System</span><span class="md:hidden">T2</span></a>
+                <a href="../trilha3/" class="px-2 py-1 text-xs font-bold rounded bg-purple-500/20 text-purple-400 border border-purple-500/30"><span class="hidden md:inline">Agent Intelligence</span><span class="md:hidden">T3</span></a>
+                <a href="../trilha4/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Interface</span><span class="md:hidden">T4</span></a>
+                <a href="../trilha5/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Infrastructure</span><span class="md:hidden">T5</span></a>
+                <a href="../trilha6/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Connectivity</span><span class="md:hidden">T6</span></a>
+                <a href="../trilha7/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Unreleased Features</span><span class="md:hidden">T7</span></a>
+                <a href="../trilha8/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Big Picture</span><span class="md:hidden">T8</span></a>
+                <button onclick="toggleTheme()" class="ml-2 p-2 rounded-lg dark:hover:bg-dark-800 dark:text-gray-400" title="Alternar tema">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Header -->
+    <header class="bg-gradient-to-b from-purple-900/30 to-transparent py-16 px-4">
+        <div class="max-w-5xl mx-auto text-center">
+            <span class="inline-block px-3 py-1 text-xs font-bold uppercase tracking-wider text-purple-400 bg-purple-500/10 rounded-full border border-purple-500/30 mb-4">TRILHA 3</span>
+            <h1 class="text-4xl md:text-5xl font-extrabold mb-4">&#x1F9E0; Agent Intelligence</h1>
+            <p class="text-lg dark:text-gray-300 max-w-2xl mx-auto mb-8">Domine o Skills System, o Agent System com fork/worktree, Coordinator Mode, Teams &amp; Swarm, o Memory System de tres camadas e Auto-Memory com Dreams.</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-xl mx-auto">
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-purple-400">6</div>
+                    <div class="text-xs dark:text-gray-400">Modulos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-purple-400">~36</div>
+                    <div class="text-xs dark:text-gray-400">Topicos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-purple-400">~5h</div>
+                    <div class="text-xs dark:text-gray-400">Duracao</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-purple-400">Avancado</div>
+                    <div class="text-xs dark:text-gray-400">Nivel</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 pb-20">
+
+        <!-- Quick Nav -->
+        <section class="mb-16">
+            <h2 class="text-xl font-bold mb-6 dark:text-gray-100">Navegacao Rapida</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <a href="#mod-3-1" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-purple-500/50 transition-colors block">
+                    <span class="text-purple-400 font-mono text-sm">3.1</span> &#x26A1; Skills System
+                </a>
+                <a href="#mod-3-2" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-purple-500/50 transition-colors block">
+                    <span class="text-purple-400 font-mono text-sm">3.2</span> &#x1F916; Agent System
+                </a>
+                <a href="#mod-3-3" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-purple-500/50 transition-colors block">
+                    <span class="text-purple-400 font-mono text-sm">3.3</span> &#x1F4CB; Coordinator Mode
+                </a>
+                <a href="#mod-3-4" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-purple-500/50 transition-colors block">
+                    <span class="text-purple-400 font-mono text-sm">3.4</span> &#x1F465; Teams &amp; Swarm
+                </a>
+                <a href="#mod-3-5" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-purple-500/50 transition-colors block">
+                    <span class="text-purple-400 font-mono text-sm">3.5</span> &#x1F9E0; Memory System
+                </a>
+                <a href="#mod-3-6" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-purple-500/50 transition-colors block">
+                    <span class="text-purple-400 font-mono text-sm">3.6</span> &#x1F4AD; Auto-Memory &amp; Dreams
+                </a>
+            </div>
+        </section>
+
+        <!-- Module 3.1 -->
+        <section id="mod-3-1" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-purple-400 font-mono text-sm font-bold">3.1</span>
+                        <span class="text-xs dark:text-gray-500">~50 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">Skills System</h3>
+                    <p class="dark:text-gray-400 text-sm">Workflows reutilizaveis como slash commands: discovery, parsing, substituicao de argumentos, execucao inline/fork e integracao MCP.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x26A1; Skill Lifecycle: Six Stages</div>
+                                <div class="text-xs dark:text-gray-500">Discovery, Load, Parse, Substitute, Execute, Inject</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> Uma skill e um "named, reusable prompt workflow" armazenado como SKILL.md com YAML frontmatter. Lifecycle em 6 estagios: Discovery (walk directories, resolve symlinks), Load (read + parse YAML), Parse (extract fields, validate hooks), Substitute ($ARGUMENTS, shell backticks), Execute (inline ou forked), Inject (tool result + model overrides).</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> Skills sao o mecanismo primario de extensibilidade para workflows customizados. Entender o lifecycle completo permite criar skills poderosas.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> SKILL.md format, YAML frontmatter, $ARGUMENTS substitution, inline vs fork context, shell injection (local skills only).</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4C1; Four Sources &amp; Priority Order</div>
+                                <div class="text-xs dark:text-gray-500">managed -> user -> project -> bundled</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> Skills carregadas de 4 fontes com prioridade: Managed/Policy (managed/.claude/skills/, enterprise-controlled), User (~/.claude/skills/, pessoal), Project (.claude/skills/, repo-scoped), Bundled (compiladas no CLI). "When two sources define a skill with the same name, the first one loaded wins."</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> A prioridade determina qual skill executa quando ha conflito de nomes. Enterprise (managed) sempre vence.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> Deduplication by resolved file path (not name), managed = highest priority, bundled = lowest, directory name becomes slash command.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4DD; SKILL.md Format &amp; Frontmatter</div>
+                                <div class="text-xs dark:text-gray-500">15+ fields: tools, model, effort, paths, hooks</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> SKILL.md com YAML frontmatter definindo: name, description, when_to_use, allowed-tools (patterns como Bash(gh:*)), argument-hint, arguments, context (fork), model override, effort level, version, user-invocable, paths (conditional activation), hooks e shell interpreter.</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> O frontmatter controla tudo: quais tools a skill pode usar, em qual modelo roda, quando ativa automaticamente. Dominar o formato e essencial.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> allowed-tools patterns, context: fork (isolated sub-agent), paths for conditional activation, model override, effort: low/medium/high, disable-model-invocation.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F504; Argument Substitution Pipeline</div>
+                                <div class="text-xs dark:text-gray-500">Named args, indexed args, shell injection, special vars</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> Pipeline de substituicao em 6 passos: named args ($foo, $bar) -> indexed args ($ARGUMENTS[0], $0, $1) -> full arg string ($ARGUMENTS) -> fallback append -> shell injection (!`command` ou ```! blocks, local only) -> special variables (${CLAUDE_SKILL_DIR}, ${CLAUDE_SESSION_ID}).</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> A substituicao de argumentos e o mecanismo de parametrizacao de skills. Shell injection permite skills dinamicas que leem estado do sistema.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> Shell-quote parsing for multi-word args, fallback "ARGUMENTS: ..." append if no placeholder found, MCP skills NEVER execute shell injection (hard security boundary).</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F50C; MCP Skills &amp; Bundled Skills</div>
+                                <div class="text-xs dark:text-gray-500">Remote skills sem shell, /simplify, /commit, /remember</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> MCP skills vem de servers remotos, sem shell injection, sem ${CLAUDE_SKILL_DIR}. Bundled skills compiladas no CLI: /simplify (3 parallel review agents), /commit, /remember, /verify, /debug, /stuck. Reference files extraidos com flags seguros (O_EXCL | O_NOFOLLOW | 0o600).</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> MCP skills sao remotas e untrusted - a boundary de seguranca e clara. Bundled skills sao exemplos de patterns avancados como parallel review.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> MCP skill registry in AppState.mcp.commands, getAllCommands() merge, registerBundledSkill(), secure nonce directories, /skillify (writes SKILL.md).</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F512; Permissions, Auto-Allow &amp; Live Reloading</div>
+                                <div class="text-xs dark:text-gray-500">Safe skills auto-approved, chokidar watch, 300ms debounce</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> Waterfall de permissoes: deny rules -> remote canonical auto-allow -> explicit allow -> safe properties check (auto-allow se sem allowed-tools, model override, hooks, paths) -> ask user. Live reloading via chokidar com 300ms debounce. Skill listing capped em 1% do context window.</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> Skills simples (informacionais) rodam sem dialogo de permissao. Skills poderosas (com Bash access) requerem aprovacao explicita. Entender a distincao e crucial.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> Safe properties check (no tools + no model + no hooks + no paths = auto-allow), Bun stat-polling fallback, ConfigChange hooks on reload, memoization cache clear.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-3-1')" class="px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg text-sm font-medium hover:bg-purple-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-3-1.html" class="px-4 py-2 text-purple-400 border border-purple-500/30 rounded-lg text-sm font-medium hover:bg-purple-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Module 3.2 -->
+        <section id="mod-3-2" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-purple-400 font-mono text-sm font-bold">3.2</span>
+                        <span class="text-xs dark:text-gray-500">~60 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">Agent System</h3>
+                    <p class="dark:text-gray-400 text-sm">Delegacao de trabalho entre instancias Claude: tres tipos de agente, sync vs async, fork path com cache sharing e worktree isolation.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F916; Three Agent Types &amp; Priority</div>
+                                <div class="text-xs dark:text-gray-500">BuiltIn, Custom, Plugin -- policySettings wins</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> Tres tipos discriminados por source: BuiltInAgentDefinition (dynamic system prompts, nao overridable por user), CustomAgentDefinition (.claude/agents/*.md ou JSON settings), PluginAgentDefinition (bundled com plugins). Prioridade: built-in -> plugin -> userSettings -> projectSettings -> flagSettings -> policySettings (managed wins).</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> Entender tipos e prioridade e essencial para criar custom agents e resolver conflitos de nome.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> AgentDefinition discriminated union, getActiveAgentsFromList(), isBuiltInAgent/isCustomAgent/isPluginAgent type guards, legacy name "Task" via aliases.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F3C3; Built-In Agents Deep Dive</div>
+                                <div class="text-xs dark:text-gray-500">General Purpose, Explore, Plan, Verification, Fork</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> 6 built-in agents: General Purpose (all tools), Explore (read-only, haiku/inherit, omitClaudeMd saves ~5-15 Gtok/week), Plan (read-only, inherit), Verification (background:true always async), Fork (experimental, cache-identical tools), StatuslineSetup.</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> Cada built-in tem restricoes especificas. Explore usa Haiku para economia. Verification e o unico com background:true hardcoded.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> Explore disallowedTools (Agent, Edit, Write), omitClaudeMd optimization, verification ephemeral /tmp scripts, custom agent markdown format with frontmatter.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F504; Sync vs Async Lifecycle</div>
+                                <div class="text-xs dark:text-gray-500">shouldRunAsync boolean, 6 conditions, detached lifecycle</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> Um unico boolean shouldRunAsync decide tudo. 6 condicoes: run_in_background=true, agent.background=true, isCoordinator, forceAsync, assistantForceAsync, proactive module active. Sync: bloqueia parent turn com await runAgent(). Async: registerAsyncAgent() retorna imediatamente, notifica via enqueueAgentNotification().</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> Async agents tem AbortController proprio nao linkado ao parent -- sobrevivem ESC. In-process teammates NAO podem lancar background agents.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> shouldRunAsync 6 conditions, isBackgroundTasksDisabled guard, registerAsyncAgent() in AppState, independent AbortController for async, in-process limitation.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F500; The Fork Path &amp; Cache Sharing</div>
+                                <div class="text-xs dark:text-gray-500">buildForkedMessages(), byte-identical prefix, recursive guard</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> Fork path (gate: FORK_SUBAGENT) herda full conversation context. buildForkedMessages() cria request byte-identical ate a directiva per-child para maximo cache sharing. Tool_result placeholders identicos: "Fork started -- processing in background". buildChildMessage() com regras non-negotiable.</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> Fork e o mecanismo de maximo aproveitamento de prompt cache. Entender por que placeholders devem ser identicos e essencial.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> Byte-identical request prefix, placeholder "Fork started", buildChildMessage() STOP-READ-THIS format, recursive fork guard, fork + worktree notice.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F333; Worktree Isolation</div>
+                                <div class="text-xs dark:text-gray-500">Git worktree temporario, smart cleanup</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> isolation: 'worktree' cria git worktree temporario antes de spawnar o agent. Smart cleanup: sem git-tracked changes = branch deletado; com changes = branch mantido para parent inspecionar/mergear.</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> Worktree isolation permite trabalho paralelo sem conflitos de arquivo. O smart cleanup previne branches orfas.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> git worktree add, smart cleanup (no changes = delete, changes = keep), fork + worktree combination, buildWorktreeNotice().</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4E8; SendMessageTool &amp; Agent Frontmatter</div>
+                                <div class="text-xs dark:text-gray-500">Inter-agent messaging, 15+ frontmatter fields</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> SendMessageTool (wire: SendMessage) e o primitivo de messaging inter-agente. Routing: "teammate-name" (direct), "*" (broadcast), "uds:path" (cross-session), "bridge:session-id" (remote). 15+ frontmatter fields para custom agents incluindo model, tools, permissionMode, maxTurns, memory, isolation, mcpServers.</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> SendMessage conecta agentes em swarms. Os frontmatter fields permitem agents altamente customizados para tarefas especificas.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> 4 message types (plain, shutdown_request, shutdown_response, plan_approval_response), 3 addressing schemes, permissionMode: bubble (escalate to parent), requiredMcpServers field.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-3-2')" class="px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg text-sm font-medium hover:bg-purple-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-3-2.html" class="px-4 py-2 text-purple-400 border border-purple-500/30 rounded-lg text-sm font-medium hover:bg-purple-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Module 3.3 -->
+        <section id="mod-3-3" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-purple-400 font-mono text-sm font-bold">3.3</span>
+                        <span class="text-xs dark:text-gray-500">~45 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">Coordinator Mode</h3>
+                    <p class="dark:text-gray-400 text-sm">Modo de operacao onde Claude atua exclusivamente como dispatcher: 4 tools, workflow de 4 fases e a arte de synthesis.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4CB; Core Concept &amp; Activation</div>
+                                <div class="text-xs dark:text-gray-500">CLAUDE_CODE_COORDINATOR_MODE=1, matchSessionMode()</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> Coordinator mode: Claude nunca executa tools diretamente, apenas despacha para worker agents. Ativado via CLAUDE_CODE_COORDINATOR_MODE=1. isCoordinatorMode() le env var sem cache (permite mudanca em sessoes resumidas). matchSessionMode() restaura modo correto em sessoes resumidas.</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> Coordinator mode e o padrao para tarefas complexas que beneficiam de paralelismo e separacao de concerns.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> No caching (runtime read), matchSessionMode() mutates process.env, exactly 4 tools (Agent, SendMessage, TaskStop, SyntheticOutput).</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F3AF; Four-Phase Task Workflow</div>
+                                <div class="text-xs dark:text-gray-500">Research -> Synthesis -> Implementation -> Verification</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> Workflow em 4 fases: Research (workers paralelos investigam codebase), Synthesis (coordinator cria specs com file paths e line numbers - NUNCA "based on your findings"), Implementation (workers fazem changes, rodam tests, commit), Verification (workers provam que codigo funciona independentemente).</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> Synthesis e o trabalho mais importante do coordinator. Delegar entendimento resulta em workers sem contexto suficiente.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> "Never write 'based on your findings'", coordinator synthesizes specific file paths + line numbers, research parallel / implementation serial per file set.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F504; Continue vs Spawn Fresh Decision</div>
+                                <div class="text-xs dark:text-gray-500">6 situacoes, context overlap como criterio</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> 6 regras de decisao: Continue se research explorou exatos files para edit (worker tem context), spawn fresh se research broad mas implementation narrow (evita noise), continue para correcao de falha (worker tem error context), spawn fresh para verificacao (fresh eyes), spawn fresh se wrong approach (context pollutes), spawn fresh para task unrelated.</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> A decisao continue vs spawn fresh impacta diretamente qualidade e eficiencia. Context overlap e o criterio chave.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> Context overlap analysis, wrong-approach pollution, verifier needs fresh eyes, error context retention value, unrelated = no useful context.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4AC; Worker Prompt Guidelines</div>
+                                <div class="text-xs dark:text-gray-500">Self-contained prompts com file paths e line numbers</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> Bad prompts delegam entendimento: "Fix the bug we discussed". Good prompts sao self-contained: "Fix null pointer in src/auth/validate.ts:42. The user field is undefined when Session.expired is true. Add null check before user.id access -- return 401. Run tests, commit, report hash."</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> A qualidade do prompt do worker determina o sucesso da task. Workers nao tem contexto do coordinator -- tudo deve estar no prompt.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> Self-contained prompts, specific file paths + line numbers, explicit expected behavior, test command, commit instruction, report format.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F6E0;&#xFE0F; Tool Restrictions &amp; Worker Context</div>
+                                <div class="text-xs dark:text-gray-500">4 coordinator tools, ASYNC_AGENT_ALLOWED_TOOLS</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> Coordinator: exatamente 4 tools (Agent, SendMessage, TaskStop, SyntheticOutput). Workers: full ASYNC_AGENT_ALLOWED_TOOLS (Bash, Read, Edit, Glob, Grep, WebSearch, Skill, Notebook, Worktree) + MCP tools. Simple mode restringe workers a Bash, Read, Edit.</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> A assimetria de tools e intencional: coordinator planeja, workers executam. Entender isso previne tentativas de filesystem access pelo coordinator.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> COORDINATOR_MODE_ALLOWED_TOOLS, ASYNC_AGENT_ALLOWED_TOOLS, getCoordinatorUserContext() (tool enum + MCP + scratchpad), CLAUDE_CODE_SIMPLE worker restriction.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4DD; The Scratchpad</div>
+                                <div class="text-xs dark:text-gray-500">Cross-worker knowledge, permission-free shared directory</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> Scratchpad e um diretorio compartilhado onde workers podem ler e escrever sem permission prompts. Permite durable findings que sobrevivem entre workers para cross-worker knowledge sharing.</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> O scratchpad e o mecanismo de comunicacao duravel entre workers. Sem ele, findings de research se perdem quando workers terminam.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> Permission-free read/write, cross-worker durability, injected via getCoordinatorUserContext(), shared workspace pattern.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-3-3')" class="px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg text-sm font-medium hover:bg-purple-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-3-3.html" class="px-4 py-2 text-purple-400 border border-purple-500/30 rounded-lg text-sm font-medium hover:bg-purple-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Module 3.4 -->
+        <section id="mod-3-4" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-purple-400 font-mono text-sm font-bold">3.4</span>
+                        <span class="text-xs dark:text-gray-500">~50 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">Teams &amp; Swarm</h3>
+                    <p class="dark:text-gray-400 text-sm">Equipes nomeadas de Claude agents com config compartilhada, messaging file-based, tres spawn backends e lifecycle completo.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F465; TeamCreateTool &amp; File Structure</div>
+                                <div class="text-xs dark:text-gray-500">5 sync steps, ~/.claude/teams/ layout, agentName@teamName</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> TeamCreateTool executa 5 passos sincronos: uniqueness check (generateWordSlug se nome existe), write TeamFile JSON, create task list, update AppState.teamContext, register session cleanup. Estrutura: ~/.claude/teams/&lt;name&gt;/config.json + permissions/ + tasks/. Agent IDs: agentName@teamName.</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> Teams sao a unidade de organizacao para trabalho paralelo com multiplos agents. Entender a estrutura on-disk ajuda debugging.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> generateWordSlug() for unique names, TeamFile JSON, task numbering starts at 1, session cleanup hook for orphaned directories.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4BB; Three Spawn Backends</div>
+                                <div class="text-xs dark:text-gray-500">tmux, iTerm2, in-process -- detection at module load</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> Tres backends com prioridade: tmux (highest, kill-pane), iTerm2 (it2 CLI, session close), in-process (AbortController). Detection via env vars capturadas em module load time: TMUX, TMUX_PANE, TERM_PROGRAM, ITERM_SESSION_ID. iTerm2 check usa 'it2 session list' (nao --version).</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> O backend determina como teammates sao spawned e killed. In-process teammates compartilham API client e MCP connections mas tem AbortController independente.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> tmux kill-pane, it2 session close, in-process AsyncLocalStorage isolation, shared API client, independent AbortController (not linked to leader).</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4EC; Mailbox Messaging System</div>
+                                <div class="text-xs dark:text-gray-500">File-based JSON, 6 message types, inbox per agent</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> Comunicacao via mailbox file-based: ~/.claude/teams/&lt;team&gt;/inbox/&lt;agent-name&gt;/. 6 tipos de mensagem: plain text, shutdown_request (lead -> teammate), idle notification (system-generated), permission_request (worker -> lead), permission_response (lead -> worker), mode_set_request.</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> Todo messaging entre agents e file-based (excecao: leader permission bridge usa module-level setter). Entender os tipos previne deadlocks de comunicacao.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> File-based messaging, idle != dead (isActive:false means turn ended, wakes on new message), shutdown_request graceful flow, permission escalation to lead.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F512; Permission Sync</div>
+                                <div class="text-xs dark:text-gray-500">Worker escalation, leader approval/denial</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> Workers podem escalar permission requests para o team lead via mailbox. O leader ve o request na UI e aprova ou nega. Isso permite controle centralizado de permissoes em swarms.</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> Permission sync e o mecanismo de seguranca para swarms. Sem ele, cada worker precisaria de interacao direta com usuario.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> permission_request message type, leader UI approval, permission_response back to worker, centralized permission control.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F504; Full Lifecycle: 4 Phases</div>
+                                <div class="text-xs dark:text-gray-500">Setup -> Parallel Work -> Shutdown -> Cleanup Guard</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> Phase 1 Setup: lead cria team, tasks, spawna teammates. Phase 2 Parallel Work: teammates claim tasks, enviam progresso. Phase 3 Shutdown: lead envia shutdown_request, teammates aprovam e saem. Phase 4 Cleanup Guard: se sessao termina sem TeamDelete, shutdown hook limpa panes e diretorios orfaos.</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> O lifecycle completo previne orphaned processes e directories. TeamDelete blocks on active members -- sempre shutdown primeiro.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> TeamDelete blocks on active, shutdown_request -> approve -> gracefulShutdown(0), session cleanup safety net, CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 gate.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F511; Key Design Invariants</div>
+                                <div class="text-xs dark:text-gray-500">Team = TaskList, idle != dead, all messaging file-based</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> Invariantes criticos: Team = TaskList (TeamCreate cria task directory). Tres backends, uma interface. Detection capturada em module load (env vars read at import). All messaging file-based. Idle nao e dead (isActive:false = turn ended, wakes on message).</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> Estes invariantes sao as regras fundamentais do sistema. Violar qualquer um causa bugs sutis e dificeis de debugar.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> Team = TaskList coupling, module-load detection (immutable after import), file-based exception (leader permission bridge), TeamDelete blocks on active members.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-3-4')" class="px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg text-sm font-medium hover:bg-purple-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-3-4.html" class="px-4 py-2 text-purple-400 border border-purple-500/30 rounded-lg text-sm font-medium hover:bg-purple-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Module 3.5 -->
+        <section id="mod-3-5" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-purple-400 font-mono text-sm font-bold">3.5</span>
+                        <span class="text-xs dark:text-gray-500">~50 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">Memory System</h3>
+                    <p class="dark:text-gray-400 text-sm">Tres camadas de memoria persistente: Auto Memory, Session Memory e Team Memory com sync server-side e secret scanning.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F9E0; Three Memory Layers</div>
+                                <div class="text-xs dark:text-gray-500">Auto Memory, Session Memory, Team Memory</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> Layer 1 Auto Memory: ~/.claude/projects/&lt;slug&gt;/memory/, fatos persistentes sobre usuario, sobrevive todas sessoes. Layer 2 Session Memory: ~/.claude/session-memory/&lt;uuid&gt;.md, notas in-session para context compaction. Layer 3 Team Memory: .../memory/team/, sync server-side per GitHub repo.</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> Memoria e o que faz Claude Code melhorar com uso. Entender as tres camadas permite otimizar o que e lembrado e compartilhado.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> Auto = cross-session persistence, Session = single-session compaction, Team = server-synced per repo, MEMORY.md index always in context.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4C2; MEMORY.md &amp; Topic Files</div>
+                                <div class="text-xs dark:text-gray-500">200 lines/25KB index, YAML frontmatter, 4 types</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> MEMORY.md: index de ate 200 linhas / 25KB, funciona como pointer list (nao content storage), sempre injetado no system prompt. Topic files com YAML frontmatter: name, description, type. 4 tipos: user (role, goals), feedback (corrections + confirmations + Why), project (ongoing work, absolute dates), reference (external pointers).</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> A taxonomia de 4 tipos com validacao em parse time garante qualidade de memoria. Saber o que NAO salvar e tao importante quanto saber o que salvar.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> Pointer list only (not content storage), 4-type taxonomy with parse-time validation, exclusions (code patterns, git history, fix recipes, CLAUDE.md content).</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F50D; Extraction Pipeline &amp; Relevance Recall</div>
+                                <div class="text-xs dark:text-gray-500">Post-query extraction, Sonnet selector, staleness signals</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> Extraction roda APOS query loops completos, nunca durante conversas. Mutual exclusion com main agent via hasMemoryWritesSince(). Relevance Recall: Sonnet side-query seleciona ate 5 topic files relevantes, le apenas primeiras 30 linhas (frontmatter range). Staleness: "This memory is N days old."</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> Extraction post-query e mutual exclusion previnem conflitos. O selector de 5 files mantém context window gerenciavel.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> hasMemoryWritesSince() mutex, Sonnet selector max 5 files, 30-line frontmatter read, staleness injection, point-in-time observation warning.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4DD; Session Memory Structure</div>
+                                <div class="text-xs dark:text-gray-500">10 fixed sections, extraction triggers, 12K token budget</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> 10 secoes fixas: Session Title, Current State, Task specification, Files and Functions, Workflow, Errors &amp; Corrections, Codebase Documentation, Learnings, Key results, Worklog. Triggers: 10K tokens para init, 5K entre updates, 3 tool calls entre updates. Budget: 12K total, 2K per section.</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> Session memory powers context compaction. Os triggers balanceiam freshness vs overhead de extraction.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> Fixed 10-section structure, minimumMessageTokensToInit: 10K, minimumTokensBetweenUpdate: 5K, toolCallsBetweenUpdates: 3, 12K total / 2K per section budget.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F310; Team Memory Sync</div>
+                                <div class="text-xs dark:text-gray-500">Delta push with SHA-256, secret scanning, scope routing</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> Server-synced subdirectory gated por TEAMMEM flag + OAuth. Sync contract: pull (server wins per-key), push (delta upload via SHA-256 hash comparison, batched 200KB max). File deletions nao propagam. 35+ secret patterns do gitleaks ruleset bloqueiam push -- "secrets never reach the server."</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> Team memory permite compartilhar conhecimento entre membros do time. Secret scanning e a guardrail critica contra vazamento de credenciais.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> Delta push (SHA-256), server wins per-key on pull, 200KB batch limit, 35+ gitleaks patterns, user type always private, project type bias toward team.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x2699;&#xFE0F; Path Resolution &amp; Disable Mechanisms</div>
+                                <div class="text-xs dark:text-gray-500">3-tier resolution, security boundary, 4 disable flags</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> Path resolution: CLAUDE_COWORK_MEMORY_PATH_OVERRIDE (env) -> autoMemoryDirectory (settings, trusted sources only) -> default (~/.claude/projects/&lt;slug&gt;/memory/). Project settings excluded from override (previne repos maliciosos redirecionando para ~/.ssh). 4 disable flags: CLAUDE_CODE_DISABLE_AUTO_MEMORY, CLAUDE_CODE_SIMPLE, autoMemoryEnabled:false, tengu_passport_quail.</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> A exclusao de project settings do override e uma decisao de seguranca critica. Saber desabilitar memoria e essencial para debugging.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> Trusted sources only for path override, project settings excluded (security), sanitized-git-root slug, 4 independent disable mechanisms.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-3-5')" class="px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg text-sm font-medium hover:bg-purple-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-3-5.html" class="px-4 py-2 text-purple-400 border border-purple-500/30 rounded-lg text-sm font-medium hover:bg-purple-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Module 3.6 -->
+        <section id="mod-3-6" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-purple-400 font-mono text-sm font-bold">3.6</span>
+                        <span class="text-xs dark:text-gray-500">~50 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">Auto-Memory &amp; Dreams</h3>
+                    <p class="dark:text-gray-400 text-sm">Dois processos background: extraction per-turn e consolidation cross-session (Dream). Recall seletivo via Sonnet e o lock file elegante.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4C1; Memory Directory &amp; Four Types</div>
+                                <div class="text-xs dark:text-gray-500">Resolution order, MEMORY.md index, topic file YAML</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> Directory resolution: env override -> settings.json -> ~/.claude/projects/&lt;slug&gt;/memory/. Contem MEMORY.md (index, always in system prompt), topic files (user_role.md, feedback_testing.md, etc), .consolidate-lock e logs/. 4 tipos: user (profile), feedback (corrections + confirmations), project (ongoing work), reference (external pointers).</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> A estrutura de diretorio e o foundation de toda a memoria persistente. Os 4 tipos com YAML frontmatter garantem organizacao semantica.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> MEMORY.md always injected, topic files loaded on-demand by Sonnet, .consolidate-lock mtime IS lastConsolidatedAt, logs/ for KAIROS/assistant mode.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x26A1; Layer 1: Extract Memories</div>
+                                <div class="text-xs dark:text-gray-500">Per-turn extraction, forked agent, mutual exclusion</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> handleStopHooks fires executeExtractMemories() apos cada query. Forked agent pattern compartilha prompt cache do parent. Closure-scoped state: lastMemoryMessageUuid (cursor), inProgress (overlap guard), turnsSinceLastExtraction (throttle). Mutual exclusion via hasMemoryWritesSince().</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> Extraction e o mecanismo que popula Auto Memory automaticamente. O forked agent pattern com cache sharing e reusavel em outros contextos.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> Forked agent shares parent prompt cache, two-turn strategy (Turn 1: parallel Reads, Turn 2: parallel Writes), tool permissions: read-only + auto-mem writes only.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4AD; Layer 2: Auto Dream (Consolidation)</div>
+                                <div class="text-xs dark:text-gray-500">3 gates, 4 phases, lock file mtime trick</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> Auto Dream fires via executeAutoDream() quando 3 gates passam: Time Gate (24h desde ultima consolidacao), Session Gate (5+ transcripts), Lock Gate (nenhum outro processo consolidando). Lock file .consolidate-lock: body = PID, mtime IS lastConsolidatedAt (1 stat() read). 4 phases: Orient, Gather recent signal, Consolidate (merge/prune/convert dates), Prune and index.</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> Dream e a "manutencao" da memoria: merge duplicatas, converte datas relativas em absolutas, mantem MEMORY.md sob 200 linhas. O lock file mtime trick e elegante.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> 3 gates (time 24h, sessions 5+, lock), lock file mtime = lastConsolidatedAt, 4 consolidation phases, relative date conversion, 200 lines/25KB MEMORY.md limit.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F50D; Recall: findRelevantMemories</div>
+                                <div class="text-xs dark:text-gray-500">Sonnet side-query, max 5 files, tool suppression</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> Em query time, Sonnet side-query seleciona ate 5 topic files relevantes. Excecao: se modelo esta usando tool ativamente (e.g. mcp__X__spawn em recentTools), reference documentation desse tool e suprimida. Staleness: "This memory is 47 days old. Memories are point-in-time observations, not live state."</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> Recall seletivo mantem context window gerenciavel. Tool suppression previne informacao redundante quando tool docs ja estao no contexto.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> Sonnet selector max 5 files, recentTools suppression, staleness injection, "Before recommending from memory" section header (outperformed abstract variants).</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F310; Team Memory Scope Routing</div>
+                                <div class="text-xs dark:text-gray-500">Private vs team, prompt-guided enforcement</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> Routing per type: user = always private, feedback = private by default (team only for project-wide conventions), project = strongly bias toward team, reference = usually team. Enforcement via prompt guidance, nao filesystem permissions.</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> Scope routing determina o que e compartilhado com o time. User memories nunca devem ser team (informacao pessoal).</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> Prompt-guided enforcement (not filesystem), user always private, feedback default private, project bias team, TEAMMEM flag gate.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-purple-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F30C; KAIROS Mode &amp; Cache Efficiency</div>
+                                <div class="text-xs dark:text-gray-500">Append-only daily logs, /dream skill, prompt cache sharing</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-purple-400">O que e:</strong> KAIROS/assistant mode: sessoes longas usam append-only daily logs em logs/YYYY/MM/YYYY-MM-DD.md. /dream skill distila logs em topic files. Cache efficiency: forked agent compartilha prompt cache do parent. Tool list deve match main agent para cache sharing (tools sao parte da cache key).</div>
+                            <div><strong class="text-purple-400">Por que aprender:</strong> KAIROS e o modo para assistentes persistentes. Cache efficiency e critica para manter custos baixos em extraction/dream.</div>
+                            <div><strong class="text-purple-400">Conceitos-chave:</strong> Append-only daily logs, /dream nightly distillation, forked agent prompt cache sharing, tool list = cache key, extraction agent runs after query loop.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-3-6')" class="px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg text-sm font-medium hover:bg-purple-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-3-6.html" class="px-4 py-2 text-purple-400 border border-purple-500/30 rounded-lg text-sm font-medium hover:bg-purple-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modals -->
+    <div id="modal-3-1" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-3-1')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-3-1')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-3-1.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+    <div id="modal-3-2" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-3-2')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-3-2')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-3-2.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+    <div id="modal-3-3" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-3-3')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-3-3')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-3-3.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+    <div id="modal-3-4" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-3-4')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-3-4')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-3-4.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+    <div id="modal-3-5" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-3-5')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-3-5')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-3-5.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+    <div id="modal-3-6" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-3-6')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-3-6')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-3-6.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+
+    <script>
+        function toggleTopic(el) {
+            const content = el.querySelector('.topic-content');
+            const section = el.closest('.divide-y');
+            if (!content) return;
+            const wasHidden = content.classList.contains('hidden');
+            section.querySelectorAll('.topic-content').forEach(c => c.classList.add('hidden'));
+            if (wasHidden) content.classList.remove('hidden');
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.classList.contains('dark');
+            html.classList.toggle('dark', !isDark);
+            html.classList.toggle('light', isDark);
+            localStorage.setItem('theme', isDark ? 'light' : 'dark');
+        }
+
+        (function() {
+            const saved = localStorage.getItem('theme');
+            if (saved === 'light') {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+            }
+        })();
+    </script>
+</body>
+</html>
