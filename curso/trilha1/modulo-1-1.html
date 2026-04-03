@@ -374,7 +374,29 @@
                 <h4 class="font-bold text-emerald-400 mb-4">&#x1F5FA;&#xFE0F; Boot Pipeline Completo</h4>
                 <div class="overflow-x-auto">
                     <pre class="mermaid">
-flowchart TD A["**Process starts**\ncli.tsx"] --> B["Set COREPACK_ENABLE_AUTO_PIN=0\nSet NODE_OPTIONS if CCR remote"] B --> C{"Fast-path\ncheck"} C -->|"--version"| V["Print version\nprocess.exit(0)"] C -->|"--daemon-worker"| D["runDaemonWorker()"] C -->|"remote-control"| BR["bridgeMain()"] C -->|"no fast-path"| E["Dynamic import main.tsx"] E --> F["main() in main.tsx"] F --> G["startMdmRawRead()\nstartKeychainPrefetch()"] G --> H["Load all static imports\n~135ms module eval"] H --> I["initializeWarningHandler()\nRegister SIGINT / exit"] I --> K["eagerLoadSettings()\nCommander.parse()"] K --> M["init() — applySafeConfigEnv()\nensureMdmSettingsLoaded()"] M --> N["runMigrations()"] N --> O["setup(cwd, permissionMode)"] O --> Q{"isBareMode?"} Q -->|"No"| R["startUdsMessaging()\ncaptureTeammateSnapshot()"] Q -->|"Yes"| S["Skip UDS + teammate"] R --> T["setCwd()\ncaptureHooksConfigSnapshot()\ninitFileChangedWatcher()"] S --> T T --> BG["Background jobs:\ninitSessionMemory()\ngetCommands() prefetch\nloadPluginHooks()"] BG --> REPL["launchRepl()"] REPL --> DONE["First render"]
+flowchart TD
+    A["Process starts - cli.tsx"] --> B["Set COREPACK_ENABLE_AUTO_PIN=0"]
+    B --> C{"Fast-path check"}
+    C -->|"--version"| V["Print version, exit"]
+    C -->|"--daemon-worker"| D["runDaemonWorker"]
+    C -->|"remote-control"| BR["bridgeMain"]
+    C -->|"no fast-path"| E["Dynamic import main.tsx"]
+    E --> F["main in main.tsx"]
+    F --> G["startMdmRawRead + startKeychainPrefetch"]
+    G --> H["Load static imports ~135ms"]
+    H --> I["initializeWarningHandler"]
+    I --> K["eagerLoadSettings + Commander.parse"]
+    K --> M["init - applySafeConfigEnv"]
+    M --> N["runMigrations"]
+    N --> O["setup cwd, permissionMode"]
+    O --> Q{"isBareMode?"}
+    Q -->|"No"| R["startUdsMessaging"]
+    Q -->|"Yes"| S["Skip UDS"]
+    R --> T["setCwd + captureHooksConfig"]
+    S --> T
+    T --> BG["Background jobs"]
+    BG --> REPL["launchRepl"]
+    REPL --> DONE["First render"]
                     </pre>
                 </div>
             </div>
