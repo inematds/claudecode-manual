@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modulo 1.5 Architecture Overview - Claude Code Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: { 400: '#34d399', 500: '#10b981', 600: '#059669', 700: '#047857', 800: '#065f46', 900: '#064e3b' },
+                        dark: { 800: '#1e293b', 900: '#0f172a', 950: '#020617' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html.light { background: #f8fafc; color: #1e293b; }
+        html.light .dark\:bg-dark-950 { background: #f8fafc !important; }
+        html.light .dark\:bg-dark-900 { background: #ffffff !important; }
+        html.light .dark\:bg-dark-800 { background: #f1f5f9 !important; }
+        html.light .dark\:bg-dark-900\/50 { background: rgba(255,255,255,0.8) !important; }
+        html.light .dark\:bg-dark-800\/50 { background: rgba(241,245,249,0.8) !important; }
+        html.light .dark\:text-white { color: #1e293b !important; }
+        html.light .dark\:text-gray-100 { color: #334155 !important; }
+        html.light .dark\:text-gray-300 { color: #475569 !important; }
+        html.light .dark\:text-gray-400 { color: #64748b !important; }
+        html.light .dark\:text-gray-500 { color: #94a3b8 !important; }
+        html.light .dark\:border-gray-700 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-800 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-700\/50 { border-color: rgba(226,232,240,0.5) !important; }
+        html.light .text-emerald-400 { color: #059669 !important; }
+        html.light .text-emerald-500 { color: #047857 !important; }
+        html.light .bg-emerald-500\/10 { background: rgba(5,150,105,0.08) !important; }
+        html.light .bg-emerald-500\/20 { background: rgba(5,150,105,0.12) !important; }
+        html.light .border-emerald-500\/30 { border-color: rgba(5,150,105,0.2) !important; }
+        html.light .from-emerald-900\/30 { --tw-gradient-from: rgba(5,150,105,0.08) !important; }
+        html.light nav { background: rgba(255,255,255,0.85) !important; border-bottom: 1px solid #e2e8f0 !important; }
+        html.light .dark\:hover\:bg-dark-800:hover { background: #e2e8f0 !important; }
+    </style>
+</head>
+<body class="dark:bg-dark-950 dark:text-white font-sans min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-40 backdrop-blur-xl dark:bg-dark-900/50 border-b dark:border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
+            <a href="../../index.html" class="text-yellow-400 font-bold text-lg whitespace-nowrap">&#x1F4BB; Claude Code Deep Dive</a>
+            <span class="dark:text-gray-600">|</span>
+            <a href="https://inema.club" target="_blank" class="text-sky-400 text-sm font-medium hover:underline">INEMA.CLUB</a>
+            <div class="flex items-center gap-1 ml-auto flex-wrap">
+                <a href="../trilha1/" class="px-2 py-1 text-xs font-bold rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"><span class="hidden md:inline">Core Architecture</span><span class="md:hidden">T1</span></a>
+                <a href="../trilha2/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Tool System</span><span class="md:hidden">T2</span></a>
+                <a href="../trilha3/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Agent Intelligence</span><span class="md:hidden">T3</span></a>
+                <a href="../trilha4/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Interface</span><span class="md:hidden">T4</span></a>
+                <a href="#" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Security</span><span class="md:hidden">T5</span></a>
+                <a href="#" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Performance</span><span class="md:hidden">T6</span></a>
+                <a href="#" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Testing</span><span class="md:hidden">T7</span></a>
+                <a href="#" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Advanced</span><span class="md:hidden">T8</span></a>
+                <button onclick="toggleTheme()" class="ml-2 p-2 rounded-lg dark:hover:bg-dark-800 dark:text-gray-400" title="Alternar tema">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <div class="max-w-5xl mx-auto px-4 pt-6 pb-2">
+        <nav class="flex items-center gap-2 text-sm dark:text-gray-400">
+            <a href="../../index.html" class="hover:text-emerald-400 transition-colors">Inicio</a>
+            <span>/</span>
+            <a href="./" class="hover:text-emerald-400 transition-colors">Trilha 1</a>
+            <span>/</span>
+            <span class="text-emerald-400 font-medium">Modulo 1.5</span>
+        </nav>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-gradient-to-b from-emerald-900/30 to-transparent py-12 px-4">
+        <div class="max-w-5xl mx-auto">
+            <span class="inline-block px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 rounded-full border border-emerald-500/30 mb-4">MODULO 1.5</span>
+            <h1 class="text-3xl md:text-4xl font-extrabold mb-3">&#x1F3D7;&#xFE0F; Architecture Overview</h1>
+            <p class="text-lg dark:text-gray-300 max-w-3xl mb-6">Licao capstone que sintetiza 49 licoes anteriores em um modelo mental completo de como o Claude Code opera desde o keystroke inicial ate o output renderizado. Uma aplicacao TypeScript construida sobre Bun, React/Ink e a API Anthropic.</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-xl">
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-emerald-400">7</div>
+                    <div class="text-xs dark:text-gray-400">Topicos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-emerald-400">~90</div>
+                    <div class="text-xs dark:text-gray-400">Minutos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-emerald-400">Deep</div>
+                    <div class="text-xs dark:text-gray-400">Nivel</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-emerald-400">Capstone</div>
+                    <div class="text-xs dark:text-gray-400">Tipo</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 pb-20">
+
+        <!-- Topic 1: Six-Layer Architecture -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-emerald-500/30">1</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F3D7;&#xFE0F; Six-Layer Architecture</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-6">O Claude Code organiza-se em seis camadas distintas:</p>
+
+                <div class="space-y-4">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-emerald-500">
+                        <h4 class="font-bold text-emerald-400 mb-1">1. Boot</h4>
+                        <p class="dark:text-gray-300 text-sm"><code>main.tsx</code>, <code>setup.ts</code>, <code>entrypoints/init.ts</code> -- startup, settings, migrations, session wiring</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-emerald-500">
+                        <h4 class="font-bold text-emerald-400 mb-1">2. UI Shell</h4>
+                        <p class="dark:text-gray-300 text-sm"><code>replLauncher.tsx</code>, <code>screens/REPL.tsx</code> -- interface Ink terminal</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-emerald-500">
+                        <h4 class="font-bold text-emerald-400 mb-1">3. State</h4>
+                        <p class="dark:text-gray-300 text-sm"><code>state/AppStateStore.ts</code>, <code>bootstrap/state.ts</code> -- immutable AppState e global singleton</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-emerald-500">
+                        <h4 class="font-bold text-emerald-400 mb-1">4. Query Engine</h4>
+                        <p class="dark:text-gray-300 text-sm"><code>QueryEngine.ts</code>, <code>query.ts</code> -- conversation lifecycle e API streaming</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-emerald-500">
+                        <h4 class="font-bold text-emerald-400 mb-1">5. Tools</h4>
+                        <p class="dark:text-gray-300 text-sm"><code>tools.ts</code>, <code>Tool.ts</code> -- capability registry incluindo Bash, file I/O, agents, MCP</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-emerald-500">
+                        <h4 class="font-bold text-emerald-400 mb-1">6. Services</h4>
+                        <p class="dark:text-gray-300 text-sm">API client, MCP connections, context compaction</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Topic 2: Data Flow -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-emerald-500/30">2</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F500; Data Flow: Prompt to Response</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4">A sequencia completa do input do usuario ate a resposta da API:</p>
+
+                <div class="space-y-3 mb-6">
+                    <div class="flex items-center gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 font-bold w-6 text-center">1</span>
+                        <div class="w-3 h-3 rounded-full bg-emerald-500 flex-shrink-0"></div>
+                        <span>User enters prompt in REPL</span>
+                    </div>
+                    <div class="flex items-center gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 font-bold w-6 text-center">2</span>
+                        <div class="w-3 h-3 rounded-full bg-emerald-500/70 flex-shrink-0"></div>
+                        <span><code>processUserInput()</code> handles slash commands</span>
+                    </div>
+                    <div class="flex items-center gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 font-bold w-6 text-center">3</span>
+                        <div class="w-3 h-3 rounded-full bg-emerald-500/70 flex-shrink-0"></div>
+                        <span>System prompt assembled from multiple sources</span>
+                    </div>
+                    <div class="flex items-center gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 font-bold w-6 text-center">4</span>
+                        <div class="w-3 h-3 rounded-full bg-yellow-500 flex-shrink-0"></div>
+                        <span><strong>Transcript written to disk BEFORE API call</strong></span>
+                    </div>
+                    <div class="flex items-center gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 font-bold w-6 text-center">5</span>
+                        <div class="w-3 h-3 rounded-full bg-emerald-500/70 flex-shrink-0"></div>
+                        <span>Query loop streams text and tool calls</span>
+                    </div>
+                    <div class="flex items-center gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 font-bold w-6 text-center">6</span>
+                        <div class="w-3 h-3 rounded-full bg-emerald-500/70 flex-shrink-0"></div>
+                        <span>Tools execute with permission checks</span>
+                    </div>
+                    <div class="flex items-center gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 font-bold w-6 text-center">7</span>
+                        <div class="w-3 h-3 rounded-full bg-emerald-500/70 flex-shrink-0"></div>
+                        <span>Response flows back through UI components</span>
+                    </div>
+                    <div class="flex items-center gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 font-bold w-6 text-center">8</span>
+                        <div class="w-3 h-3 rounded-full bg-emerald-500 flex-shrink-0"></div>
+                        <span>Session stored as JSONL</span>
+                    </div>
+                </div>
+
+                <div class="dark:bg-dark-900 rounded-xl border border-emerald-500/30 p-6 bg-gradient-to-r from-emerald-500/5 to-transparent">
+                    <h4 class="font-bold text-emerald-400 mb-2">&#x1F4A1; Decisao Critica de Design</h4>
+                    <p class="dark:text-gray-300 text-sm">"The transcript is written <strong>before</strong> the API call, not after. This is intentional: if the process is killed mid-request, the session is still resumable."</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Topic 3: Permission Architecture -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-emerald-500/30">3</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F6E1;&#xFE0F; Permission Architecture</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4">A funcao <code class="text-emerald-400">canUseTool()</code> serve como o unico choke point arquitetural para decisoes de permissao:</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border border-emerald-500/30 text-center">
+                        <h4 class="font-bold text-emerald-400 mb-2">default</h4>
+                        <p class="dark:text-gray-300 text-sm">Pergunta ao usuario para tools fora da allow-list</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border border-yellow-500/30 text-center">
+                        <h4 class="font-bold text-yellow-400 mb-2">auto</h4>
+                        <p class="dark:text-gray-300 text-sm">Permite automaticamente tools safe</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border border-red-500/30 text-center">
+                        <h4 class="font-bold text-red-400 mb-2">bypass</h4>
+                        <p class="dark:text-gray-300 text-sm">Permite tudo sem perguntar</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Topic 4: Two-Layer State -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-emerald-500/30">4</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F4E6; Two-Layer State Model</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-emerald-500">
+                        <h4 class="font-bold text-emerald-400 mb-2">Layer 1 -- Global Singleton</h4>
+                        <p class="dark:text-gray-400 text-xs mb-2"><code>bootstrap/state.ts</code></p>
+                        <p class="dark:text-gray-300 text-sm">Constantes de process-lifetime: sessionId, cwd, projectRoot, totalCostUSD, token budget counters. Explicitamente nao e React state.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-blue-500">
+                        <h4 class="font-bold text-blue-400 mb-2">Layer 2 -- React State</h4>
+                        <p class="dark:text-gray-400 text-xs mb-2"><code>state/AppStateStore.ts</code></p>
+                        <p class="dark:text-gray-300 text-sm"><code>DeepImmutable&lt;AppState&gt;</code> contendo messages, MCP clients, permission context, tasks, agents, file history. Atualizado imutavelmente via <code>setAppState()</code>.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Topic 5: Session & MCP -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-emerald-500/30">5</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F504; Session Management &amp; MCP</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <h4 class="font-bold text-emerald-400 mb-3">Session Storage</h4>
+                <p class="dark:text-gray-300 text-sm mb-4">Sessoes armazenadas como JSONL em <code class="text-emerald-400">~/.claude/projects/&lt;cwd-hash&gt;/&lt;session-id&gt;.jsonl</code>:</p>
+                <ul class="dark:text-gray-300 text-sm space-y-2 list-disc pl-6 mb-6">
+                    <li>Fire-and-forget transcript writes com 100ms lazy flush</li>
+                    <li>User messages awaited antes da API call</li>
+                    <li>Assistant messages fire-and-forget para preservar streaming</li>
+                    <li>Sessoes resumiveis via <code>loadTranscriptFromFile()</code></li>
+                </ul>
+
+                <h4 class="font-bold text-emerald-400 mb-3">MCP Integration</h4>
+                <p class="dark:text-gray-300 text-sm mb-4">MCP servers conectam como objetos <code class="text-emerald-400">MCPServerConnection</code>:</p>
+                <ul class="dark:text-gray-300 text-sm space-y-2 list-disc pl-6">
+                    <li>Inicializados antes da primeira query</li>
+                    <li>Passados em cada <code>ToolUseContext</code></li>
+                    <li>Tools, commands, resources adicionados dinamicamente via <code>getMcpToolsCommandsAndResources()</code></li>
+                    <li>Separados do base tool registry mas integrados na montagem da tool list</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Topic 6: Agent Swarms & Hooks -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-emerald-500/30">6</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F9EC; Agent Swarms &amp; Hook System</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="font-bold text-emerald-400 mb-3">Agent Swarms</h4>
+                        <p class="dark:text-gray-300 text-sm mb-3">O <code>AgentTool</code> permite execucao recursiva:</p>
+                        <ul class="dark:text-gray-300 text-sm space-y-2 list-disc pl-6">
+                            <li>Cada sub-agente spawna propria instancia de <code>QueryEngine</code></li>
+                            <li>Tool set restrito do parent</li>
+                            <li>Em swarm mode (<code>ENABLE_AGENT_SWARMS=true</code>), agentes comunicam via UDS messaging</li>
+                            <li><code>TeamCreateTool</code> para registro de agentes</li>
+                            <li><code>SendMessageTool</code> para comunicacao inbox</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-emerald-400 mb-3">Hook System</h4>
+                        <p class="dark:text-gray-300 text-sm mb-3">Hooks de lifecycle configurados em <code>settings.json</code>:</p>
+                        <ul class="dark:text-gray-300 text-sm space-y-1 list-disc pl-6">
+                            <li><code>PreToolUse</code></li>
+                            <li><code>PostToolUse</code></li>
+                            <li><code>PreCompact</code></li>
+                            <li><code>PostCompact</code></li>
+                            <li><code>Stop</code></li>
+                            <li><code>Notification</code></li>
+                            <li><code>FileChanged</code></li>
+                            <li><code>SessionStart</code></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="dark:bg-dark-900 rounded-xl border border-yellow-500/30 p-6 mt-4">
+                    <h4 class="font-bold text-yellow-400 mb-2">&#x26A0;&#xFE0F; Security Invariant</h4>
+                    <p class="dark:text-gray-300 text-sm">Hooks sao snapshotted uma vez no startup via <code>captureHooksConfigSnapshot()</code>. O invariante de seguranca previne injecao mid-session de hooks maliciosos.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Topic 7: Key Design Patterns -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-emerald-500/30">7</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F48E; Key Design Patterns &amp; Critical Invariants</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <h4 class="font-bold text-emerald-400 mb-4">6 Design Patterns</h4>
+                <div class="space-y-4 mb-6">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-emerald-500">
+                        <h4 class="font-bold text-emerald-400 mb-1">1. Async Generator Threading</h4>
+                        <p class="dark:text-gray-300 text-sm">Dados fluem como generator yields da API pela UI. <code>yield*</code> compoe toda a stack e backpressure flui naturalmente.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-emerald-500">
+                        <h4 class="font-bold text-emerald-400 mb-1">2. Dead Code Elimination</h4>
+                        <p class="dark:text-gray-300 text-sm">Flags <code>feature()</code> sao avaliados em bundle time pelo Bun, eliminando codigo inatingivel de builds externos e prevenindo vazamento de strings.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-emerald-500">
+                        <h4 class="font-bold text-emerald-400 mb-1">3. Cache-Warming for Latency</h4>
+                        <p class="dark:text-gray-300 text-sm">Caminhos criticos sao pre-aquecidos em paralelo durante o setup: TCP warm-up, keychain reads, MDM policy reads.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-emerald-500">
+                        <h4 class="font-bold text-emerald-400 mb-1">4. Immutable AppState + Mutable bootstrap/state</h4>
+                        <p class="dark:text-gray-300 text-sm">React state imutavel via <code>DeepImmutable</code>; constantes de sessao em module singleton plain.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-emerald-500">
+                        <h4 class="font-bold text-emerald-400 mb-1">5. isBareMode() Fast Path</h4>
+                        <p class="dark:text-gray-300 text-sm">Um unico flag pula React, Ink, UDS, plugins para execucao headless.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-emerald-500">
+                        <h4 class="font-bold text-emerald-400 mb-1">6. Parallel Subprocess Investment</h4>
+                        <p class="dark:text-gray-300 text-sm">Subprocessos disparam cedo e rodam durante avaliacao JavaScript.</p>
+                    </div>
+                </div>
+
+                <h4 class="font-bold text-emerald-400 mb-4">Critical Invariants</h4>
+                <div class="space-y-2">
+                    <div class="flex items-start gap-2 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 mt-0.5 font-bold">1.</span>
+                        <span>Hooks captured after <code>setCwd()</code> but before any query (security)</span>
+                    </div>
+                    <div class="flex items-start gap-2 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 mt-0.5 font-bold">2.</span>
+                        <span>Transcript written before API call (crash resilience)</span>
+                    </div>
+                    <div class="flex items-start gap-2 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 mt-0.5 font-bold">3.</span>
+                        <span>Tool list stable per build (prompt cache key)</span>
+                    </div>
+                    <div class="flex items-start gap-2 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 mt-0.5 font-bold">4.</span>
+                        <span>Feature gates eliminated at bundle time (deterministic tools)</span>
+                    </div>
+                    <div class="flex items-start gap-2 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 mt-0.5 font-bold">5.</span>
+                        <span>AppState immutable (React change detection)</span>
+                    </div>
+                    <div class="flex items-start gap-2 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 mt-0.5 font-bold">6.</span>
+                        <span>QueryEngine owns full conversation lifecycle</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive vs Headless -->
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6">
+                <h4 class="font-bold text-emerald-400 mb-4">Interactive vs Headless Modes</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border border-emerald-500/30">
+                        <h4 class="font-bold text-emerald-400 mb-2">&#x2705; Interactive (default)</h4>
+                        <ul class="dark:text-gray-300 text-sm space-y-1 list-disc pl-4">
+                            <li>Full Ink/React rendering</li>
+                            <li>Trust dialog on first launch</li>
+                            <li>Session transcript awaited</li>
+                            <li>Deferred prefetches after first render</li>
+                        </ul>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border border-blue-500/30">
+                        <h4 class="font-bold text-blue-400 mb-2">&#x26A1; Headless (<code>-p</code>/<code>--print</code>)</h4>
+                        <ul class="dark:text-gray-300 text-sm space-y-1 list-disc pl-4">
+                            <li>Stdout text only</li>
+                            <li>Implicit trust</li>
+                            <li>Fire-and-forget transcript</li>
+                            <li>React never imported</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary -->
+        <section class="mb-16">
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6">
+                <h3 class="text-xl font-bold text-emerald-400 mb-4">&#x1F4CB; Resumo do Modulo</h3>
+                <div class="space-y-3">
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 mt-0.5">&#x2705;</span>
+                        <span>6 camadas (Boot, UI Shell, State, Query Engine, Tools, Services) formam o mapa mental completo da arquitetura</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 mt-0.5">&#x2705;</span>
+                        <span>Transcript-first reliability: mensagem persistida antes da API call garante crash resilience</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 mt-0.5">&#x2705;</span>
+                        <span>canUseTool() e o unico choke point de seguranca com 3 modos (default, auto, bypass)</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 mt-0.5">&#x2705;</span>
+                        <span>Two-layer state: bootstrap/state.ts (global singleton) + AppStateStore.ts (immutable React state)</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 mt-0.5">&#x2705;</span>
+                        <span>Agent swarms via AgentTool com QueryEngine recursivo e comunicacao UDS</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 mt-0.5">&#x2705;</span>
+                        <span>6 design patterns criticos: generators all the way down, dead code elimination, cache-warming, immutable state, bare mode fast path, parallel subprocesses</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Navigation -->
+        <div class="flex items-center justify-between">
+            <a href="modulo-1-4.html" class="flex items-center gap-2 dark:text-gray-400 hover:text-emerald-400 transition-colors">
+                <span>&#x2190;</span> Modulo Anterior
+            </a>
+            <a href="./" class="flex items-center gap-2 text-emerald-400 hover:text-emerald-300 transition-colors font-medium">
+                Voltar para Trilha <span>&#x2192;</span>
+            </a>
+        </div>
+
+    </main>
+
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.classList.contains('dark');
+            html.classList.toggle('dark', !isDark);
+            html.classList.toggle('light', isDark);
+            localStorage.setItem('theme', isDark ? 'light' : 'dark');
+        }
+        (function() {
+            const saved = localStorage.getItem('theme');
+            if (saved === 'light') {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+            }
+        })();
+    </script>
+</body>
+</html>

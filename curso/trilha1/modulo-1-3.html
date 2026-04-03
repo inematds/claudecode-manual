@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modulo 1.3 State Management - Claude Code Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true, theme:'dark'});</script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: { 400: '#34d399', 500: '#10b981', 600: '#059669', 700: '#047857', 800: '#065f46', 900: '#064e3b' },
+                        dark: { 800: '#1e293b', 900: '#0f172a', 950: '#020617' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html.light { background: #f8fafc; color: #1e293b; }
+        html.light .dark\:bg-dark-950 { background: #f8fafc !important; }
+        html.light .dark\:bg-dark-900 { background: #ffffff !important; }
+        html.light .dark\:bg-dark-800 { background: #f1f5f9 !important; }
+        html.light .dark\:bg-dark-900\/50 { background: rgba(255,255,255,0.8) !important; }
+        html.light .dark\:bg-dark-800\/50 { background: rgba(241,245,249,0.8) !important; }
+        html.light .dark\:text-white { color: #1e293b !important; }
+        html.light .dark\:text-gray-100 { color: #334155 !important; }
+        html.light .dark\:text-gray-300 { color: #475569 !important; }
+        html.light .dark\:text-gray-400 { color: #64748b !important; }
+        html.light .dark\:text-gray-500 { color: #94a3b8 !important; }
+        html.light .dark\:border-gray-700 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-800 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-700\/50 { border-color: rgba(226,232,240,0.5) !important; }
+        html.light .text-emerald-400 { color: #059669 !important; }
+        html.light .text-emerald-500 { color: #047857 !important; }
+        html.light .bg-emerald-500\/10 { background: rgba(5,150,105,0.08) !important; }
+        html.light .bg-emerald-500\/20 { background: rgba(5,150,105,0.12) !important; }
+        html.light .border-emerald-500\/30 { border-color: rgba(5,150,105,0.2) !important; }
+        html.light .from-emerald-900\/30 { --tw-gradient-from: rgba(5,150,105,0.08) !important; }
+        html.light nav { background: rgba(255,255,255,0.85) !important; border-bottom: 1px solid #e2e8f0 !important; }
+        html.light .dark\:hover\:bg-dark-800:hover { background: #e2e8f0 !important; }
+    </style>
+</head>
+<body class="dark:bg-dark-950 dark:text-white font-sans min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-40 backdrop-blur-xl dark:bg-dark-900/50 border-b dark:border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
+            <a href="../../index.html" class="text-yellow-400 font-bold text-lg whitespace-nowrap">&#x1F4BB; Claude Code Deep Dive</a>
+            <span class="dark:text-gray-600">|</span>
+            <a href="https://inema.club" target="_blank" class="text-sky-400 text-sm font-medium hover:underline">INEMA.CLUB</a>
+            <div class="flex items-center gap-1 ml-auto flex-wrap">
+                <a href="../trilha1/" class="px-2 py-1 text-xs font-bold rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"><span class="hidden md:inline">Core Architecture</span><span class="md:hidden">T1</span></a>
+                <a href="../trilha2/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Tool System</span><span class="md:hidden">T2</span></a>
+                <a href="../trilha3/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Agent Intelligence</span><span class="md:hidden">T3</span></a>
+                <a href="../trilha4/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Interface</span><span class="md:hidden">T4</span></a>
+                <a href="#" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Security</span><span class="md:hidden">T5</span></a>
+                <a href="#" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Performance</span><span class="md:hidden">T6</span></a>
+                <a href="#" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Testing</span><span class="md:hidden">T7</span></a>
+                <a href="#" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Advanced</span><span class="md:hidden">T8</span></a>
+                <button onclick="toggleTheme()" class="ml-2 p-2 rounded-lg dark:hover:bg-dark-800 dark:text-gray-400" title="Alternar tema">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <div class="max-w-5xl mx-auto px-4 pt-6 pb-2">
+        <nav class="flex items-center gap-2 text-sm dark:text-gray-400">
+            <a href="../../index.html" class="hover:text-emerald-400 transition-colors">Inicio</a>
+            <span>/</span>
+            <a href="./" class="hover:text-emerald-400 transition-colors">Trilha 1</a>
+            <span>/</span>
+            <span class="text-emerald-400 font-medium">Modulo 1.3</span>
+        </nav>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-gradient-to-b from-emerald-900/30 to-transparent py-12 px-4">
+        <div class="max-w-5xl mx-auto">
+            <span class="inline-block px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 rounded-full border border-emerald-500/30 mb-4">MODULO 1.3</span>
+            <h1 class="text-3xl md:text-4xl font-extrabold mb-3">&#x1F4E6; State Management</h1>
+            <p class="text-lg dark:text-gray-300 max-w-3xl mb-6">Claude Code implementa seu proprio store em 35 linhas de TypeScript sem Redux, Zustand ou Context. A arquitetura abrange tres camadas: store primitivo framework-agnostico, AppState e factory domain-specific, e integracao React via hooks e providers.</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-xl">
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-emerald-400">7</div>
+                    <div class="text-xs dark:text-gray-400">Topicos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-emerald-400">~100</div>
+                    <div class="text-xs dark:text-gray-400">Minutos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-emerald-400">Deep</div>
+                    <div class="text-xs dark:text-gray-400">Nivel</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-emerald-400">Source</div>
+                    <div class="text-xs dark:text-gray-400">Tipo</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 pb-20">
+
+        <!-- Topic 1: createStore -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-emerald-500/30">1</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F3D7;&#xFE0F; The createStore Pattern</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4">O store primitivo fornece tres operacoes em apenas 35 linhas:</p>
+
+                <pre class="bg-gray-900 rounded-lg p-4 overflow-x-auto mb-6"><code class="text-sm text-gray-300">export function createStore&lt;T&gt;(
+  initialState: T,
+  onChange?: OnChange&lt;T&gt;,
+): Store&lt;T&gt; {
+  let state = initialState
+  const listeners = new Set&lt;Listener&gt;()
+
+  return {
+    getState: () =&gt; state,
+
+    setState: (updater) =&gt; {
+      const prev = state
+      const next = updater(prev)
+      if (Object.is(next, prev)) return   // bail if no change
+      state = next
+      onChange?.({ newState: next, oldState: prev })  // side-effect hook
+      for (const listener of listeners) listener()  // notify React
+    },
+
+    subscribe: (listener) =&gt; {
+      listeners.add(listener)
+      return () =&gt; listeners.delete(listener)  // unsubscribe
+    },
+  }
+}</code></pre>
+
+                <div class="dark:bg-dark-900 rounded-xl border border-emerald-500/30 p-6 bg-gradient-to-r from-emerald-500/5 to-transparent mb-6">
+                    <h4 class="font-bold text-emerald-400 mb-2">&#x1F4A1; Por que nao useState / useReducer?</h4>
+                    <p class="dark:text-gray-300 text-sm">React hooks vinculam o lifetime do estado a arvores de componentes. O Claude Code precisa de estado acessivel de codigo nao-React: headless mode, SDK print layer, sessoes de teammate per-process e a cadeia de side-effects <code>onChangeAppState</code>. Um objeto JavaScript simples com um <code>Set</code> de listeners evita essa restricao.</p>
+                </div>
+
+                <div class="dark:bg-dark-900 rounded-xl border border-emerald-500/30 p-6 bg-gradient-to-r from-emerald-500/5 to-transparent">
+                    <h4 class="font-bold text-emerald-400 mb-2">&#x1F4A1; Por que nao Zustand / Jotai?</h4>
+                    <p class="dark:text-gray-300 text-sm">Zero dependencia de bundle. A interface necessaria -- <code>getState</code>, <code>setState</code>, <code>subscribe</code> -- mapeia exatamente para os requisitos de <code>useSyncExternalStore</code> sem nada a mais.</p>
+                </div>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border border-yellow-500/30 p-6">
+                <h4 class="font-bold text-yellow-400 mb-2">&#x26A0;&#xFE0F; Invariante-chave</h4>
+                <p class="dark:text-gray-300 text-sm"><code>setState</code> recebe uma updater function <code>(prev) =&gt; next</code>, nunca um objeto parcial. Isso forca imutabilidade no call site: callers devem spread o estado anterior e retornar uma nova referencia. <code>Object.is</code> equality checking significa que re-renders so disparam quando a referencia muda.</p>
+            </div>
+        </section>
+
+        <!-- Topic 2: AppState Shape -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-emerald-500/30">2</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F4CA; The AppState Shape - 90+ Fields</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4"><code class="text-emerald-400">AppState</code> definido em <code>state/AppStateStore.ts</code> contem mais de 90 campos distintos organizados em seis categorias logicas. O tipo e <code>DeepImmutable&lt;{...}&gt;</code> para a porcao serializavel, com certos campos escapando o wrapper de imutabilidade.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-emerald-500">
+                        <h4 class="font-bold text-emerald-400 mb-1">Session Core</h4>
+                        <p class="dark:text-gray-300 text-xs">settings, verbose, mainLoopModel, thinkingEnabled, effortValue, fastMode</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-emerald-500">
+                        <h4 class="font-bold text-emerald-400 mb-1">UI State</h4>
+                        <p class="dark:text-gray-300 text-xs">expandedView, footerSelection, spinnerTip, activeOverlays, statusLineText</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-emerald-500">
+                        <h4 class="font-bold text-emerald-400 mb-1">Permissions</h4>
+                        <p class="dark:text-gray-300 text-xs">toolPermissionContext (mode, bypass flags), denialTracking, pendingPlanVerification</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-emerald-500">
+                        <h4 class="font-bold text-emerald-400 mb-1">Agent &amp; Tasks</h4>
+                        <p class="dark:text-gray-300 text-xs">tasks (keyed by taskId), agentNameRegistry, foregroundedTaskId, teamContext</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-emerald-500">
+                        <h4 class="font-bold text-emerald-400 mb-1">Remote &amp; Bridge</h4>
+                        <p class="dark:text-gray-300 text-xs">remoteSessionUrl, remoteConnectionStatus, replBridgeEnabled/Connected/Active</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-emerald-500">
+                        <h4 class="font-bold text-emerald-400 mb-1">Subsystem State</h4>
+                        <p class="dark:text-gray-300 text-xs">mcp, plugins, speculation, promptSuggestion, notifications, todos, inbox</p>
+                    </div>
+                </div>
+
+                <h4 class="font-bold text-emerald-400 mb-3">DeepImmutable e o Escape Hatch</h4>
+                <pre class="bg-gray-900 rounded-lg p-4 overflow-x-auto mb-4"><code class="text-sm text-gray-300">export type AppState = DeepImmutable&lt;{
+  settings: SettingsJson
+  verbose: boolean
+  // ... ~60 serializable fields ...
+}&gt; &amp; {
+  // Excluded from DeepImmutable -- contain function types
+  tasks: { [taskId: string]: TaskState }
+  agentNameRegistry: Map&lt;string, AgentId&gt;
+  mcp: { clients: MCPServerConnection[]; /* ... */ }
+  // ...
+}</code></pre>
+                <p class="dark:text-gray-300 text-sm"><code>tasks</code>, <code>agentNameRegistry</code>, <code>sessionHooks</code>, <code>activeOverlays</code> e <code>replContext</code> nao sao wrappados em <code>DeepImmutable</code> porque contem tipos function que a transformacao recursiva readonly do TypeScript nao lida. Trate-os como logicamente imutaveis (sempre spread antes de mutar).</p>
+            </div>
+        </section>
+
+        <!-- Topic 3: onChangeAppState -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-emerald-500/30">3</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F50D; onChangeAppState - The Side-Effect Chokepoint</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-blue-500 mb-6">
+                    <h4 class="font-bold text-blue-400 mb-2">&#x1F4CA; O Problema que Resolveu</h4>
+                    <p class="dark:text-gray-300 text-sm">Antes deste padrao, mudancas de permission-mode eram relayed ao dashboard remoto (CCR) por apenas <strong>2 de 8+</strong> caminhos de mutacao. Os outros 6 mutavam AppState silenciosamente, deixando a web UI desatualizada. Centralizar o diff aqui significa que qualquer <code>setState</code> que muda o mode automaticamente sincroniza -- sem mudancas em call sites individuais.</p>
+                </div>
+
+                <h4 class="font-bold text-emerald-400 mb-3">Os 6 Diff Blocks Atuais</h4>
+
+                <pre class="bg-gray-900 rounded-lg p-4 overflow-x-auto mb-4"><code class="text-sm text-gray-300">export function onChangeAppState({ newState, oldState }) {
+  // 1. Permission mode -- sync to CCR + SDK status stream
+  if (prevMode !== newMode) {
+    const prevExternal = toExternalPermissionMode(prevMode)
+    const newExternal  = toExternalPermissionMode(newMode)
+    if (prevExternal !== newExternal) {
+      notifySessionMetadataChanged({ permission_mode: newExternal })
+    }
+    notifyPermissionModeChanged(newMode)
+  }
+
+  // 2. mainLoopModel -- persist to settings + bootstrap override
+  if (newState.mainLoopModel !== oldState.mainLoopModel) { ... }
+
+  // 3. expandedView -- persist to globalConfig
+  if (newState.expandedView !== oldState.expandedView) { ... }
+
+  // 4. verbose -- persist to globalConfig
+  if (newState.verbose !== oldState.verbose) { ... }
+
+  // 5. tungstenPanelVisible -- ant-only, persist to globalConfig
+  if (process.env.USER_TYPE === 'ant' &amp;&amp; ...) { ... }
+
+  // 6. settings -- clear auth caches + re-apply env vars
+  if (newState.settings !== oldState.settings) {
+    clearApiKeyHelperCache()
+    clearAwsCredentialsCache()
+    clearGcpCredentialsCache()
+  }
+}</code></pre>
+
+                <div class="dark:bg-dark-900 rounded-xl border border-emerald-500/30 p-6 bg-gradient-to-r from-emerald-500/5 to-transparent">
+                    <h4 class="font-bold text-emerald-400 mb-2">&#x1F4A1; Externalization Guard</h4>
+                    <p class="dark:text-gray-300 text-sm">Nem todos os modos de permissao internos tem equivalentes externos. <code>toExternalPermissionMode</code> colapsa nomes internal-only como <code>'bubble'</code> e <code>'ungated-auto'</code> para <code>'default'</code> antes de enviar ao CCR. Sem isso, o dashboard remoto receberia nomes de modo sem significado.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Topic 4: React Hooks -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-emerald-500/30">4</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x2699;&#xFE0F; React Hooks Layer</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4"><code class="text-emerald-400">state/AppState.tsx</code> exporta tres hooks e um provider:</p>
+
+                <pre class="bg-gray-900 rounded-lg p-4 overflow-x-auto mb-6"><code class="text-sm text-gray-300">// Read a slice -- re-renders only when selected value changes
+const verbose = useAppState(s =&gt; s.verbose)
+const model   = useAppState(s =&gt; s.mainLoopModel)
+
+// Write without subscribing -- stable reference, never causes re-renders
+const setAppState = useSetAppState()
+setAppState(prev =&gt; ({ ...prev, verbose: true }))
+
+// Get the raw store -- for passing to non-React helpers
+const store = useAppStateStore()
+doSomethingOutsideReact(store.getState, store.setState)</code></pre>
+
+                <!-- Do vs Don't -->
+                <h4 class="font-bold text-emerald-400 mb-3">Selector Rules</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border border-emerald-500/30">
+                        <h4 class="font-bold text-emerald-400 mb-2">&#x2705; Correto</h4>
+                        <pre class="bg-gray-900 rounded-lg p-3 overflow-x-auto"><code class="text-xs text-gray-300">// Good -- returns existing reference
+const { text, promptId } =
+  useAppState(s =&gt; s.promptSuggestion)</code></pre>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border border-red-500/30">
+                        <h4 class="font-bold text-red-400 mb-2">&#x274C; Incorreto</h4>
+                        <pre class="bg-gray-900 rounded-lg p-3 overflow-x-auto"><code class="text-xs text-gray-300">// Bad -- new object every render
+const { text, promptId } =
+  useAppState(s =&gt; ({
+    text: s.promptSuggestion.text,
+    promptId: s.promptSuggestion.promptId
+  }))</code></pre>
+                    </div>
+                </div>
+                <p class="dark:text-gray-300 text-sm mt-3">NAO retorne novos objetos do selector. <code>useSyncExternalStore</code> compara snapshots com <code>Object.is</code>. Um inline <code>s =&gt; ({ a: s.a, b: s.b })</code> cria um novo objeto a cada render, disparando um <strong>infinite re-render loop</strong>.</p>
+            </div>
+        </section>
+
+        <!-- Topic 5: Selectors -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-emerald-500/30">5</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F4C1; Selectors &amp; Transition Helpers</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4">Selectors em <code class="text-emerald-400">state/selectors.ts</code> aceitam <code>Pick&lt;AppState, ...&gt;</code> (nao o estado completo) para testabilidade:</p>
+
+                <pre class="bg-gray-900 rounded-lg p-4 overflow-x-auto mb-6"><code class="text-sm text-gray-300">export function getViewedTeammateTask(
+  appState: Pick&lt;AppState, 'viewingAgentTaskId' | 'tasks'&gt;
+): InProcessTeammateTaskState | undefined { ... }
+
+export type ActiveAgentForInput =
+  | { type: 'leader' }
+  | { type: 'viewed';     task: InProcessTeammateTaskState }
+  | { type: 'named_agent'; task: LocalAgentTaskState       }
+
+export function getActiveAgentForInput(appState: AppState):
+  ActiveAgentForInput { ... }</code></pre>
+
+                <h4 class="font-bold text-emerald-400 mb-3">Transition Helpers - teammateViewHelpers.ts</h4>
+                <p class="dark:text-gray-300 text-sm mb-4">Transicoes de estado complexas recebem <code>setAppState</code> como argumento, mantendo-se framework-agnosticas e testaveis fora do React:</p>
+
+                <pre class="bg-gray-900 rounded-lg p-4 overflow-x-auto mb-4"><code class="text-sm text-gray-300">// Enter teammate transcript view
+export function enterTeammateView(
+  taskId: string,
+  setAppState: (updater: (prev: AppState) =&gt; AppState) =&gt; void,
+): void
+
+// Exit back to leader's view
+export function exitTeammateView(
+  setAppState: (updater: (prev: AppState) =&gt; AppState) =&gt; void,
+): void
+
+// Context-sensitive x button: abort if running, dismiss if terminal
+export function stopOrDismissAgent(
+  taskId: string,
+  setAppState: (updater: (prev: AppState) =&gt; AppState) =&gt; void,
+): void</code></pre>
+            </div>
+
+            <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-blue-500">
+                <h4 class="font-bold text-blue-400 mb-2">&#x1F4CA; Retain/Evict Lifecycle</h4>
+                <ul class="dark:text-gray-300 text-sm space-y-1 list-disc pl-4">
+                    <li><strong>Stub:</strong> <code>retain: false</code>, <code>messages: undefined</code>. Row aparece no painel sem transcript.</li>
+                    <li><strong>Retained:</strong> <code>retain: true</code>, messages carregadas. Acionado por <code>enterTeammateView</code>.</li>
+                    <li><strong>Eviction pending:</strong> task terminal, <code>evictAfter = Date.now() + 30_000</code>. Row permanece 30s (<code>PANEL_GRACE_MS</code>).</li>
+                    <li><strong>Immediate dismiss:</strong> <code>evictAfter = 0</code>. Filter esconde row imediatamente.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Topic 6: Full Data Flow -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-emerald-500/30">6</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F500; Full Data Flow</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <h4 class="font-bold text-emerald-400 mb-4">Diagrama: Do Componente ao Re-Render</h4>
+                <div class="overflow-x-auto">
+                    <pre class="mermaid">
+flowchart TD
+    A["Component calls useSetAppState()"] -->|"returns store.setState"| B["store.setState(updater)"]
+    B --> C{"Object.is(next, prev)?"}
+    C -->|"same"| Z["Return - no-op"]
+    C -->|"changed"| D["state = next"]
+    D --> E["onChangeAppState({ newState, oldState })"]
+    E --> F1["permission mode?"]
+    E --> F2["mainLoopModel?"]
+    E --> F3["expandedView?"]
+    E --> F4["settings?"]
+    F1 -->|"yes"| G1["notifySessionMetadataChanged"]
+    F2 -->|"yes"| G2["updateSettingsForSource"]
+    F3 -->|"yes"| G3["saveGlobalConfig"]
+    F4 -->|"yes"| G4["clearAuthCaches"]
+    D --> H["for listener: listener()"]
+    H --> I["useSyncExternalStore re-render"]
+    I --> J["selector compares with Object.is"]
+    J -->|"changed"| K["Component re-renders"]
+    J -->|"same"| L["Render skipped"]
+                    </pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Topic 7: Context vs State -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-emerald-500/30">7</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F5C2;&#xFE0F; Context vs State</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4">Nem tudo no diretorio <code>context/</code> e React Context. O diretorio contem um mix de padroes:</p>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b dark:border-gray-700">
+                                <th class="text-left py-2 px-3 text-emerald-400 font-bold">Padrao</th>
+                                <th class="text-left py-2 px-3 text-emerald-400 font-bold">Exemplos</th>
+                                <th class="text-left py-2 px-3 text-emerald-400 font-bold">Descricao</th>
+                            </tr>
+                        </thead>
+                        <tbody class="dark:text-gray-300">
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 px-3 font-medium">React Context (thin)</td><td class="py-2 px-3">modalContext, overlayContext</td><td class="py-2 px-3">Valores compartilhados na arvore de componentes</td></tr>
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 px-3 font-medium">Hooks over AppState</td><td class="py-2 px-3">notifications.tsx</td><td class="py-2 px-3">Le/escreve AppState via useAppState + useSetAppState</td></tr>
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 px-3 font-medium">External Store</td><td class="py-2 px-3">fpsMetrics, stats</td><td class="py-2 px-3">Dados proprios fora do AppState (metricas de perf)</td></tr>
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 px-3 font-medium">Side-Effect Manager</td><td class="py-2 px-3">mailbox, voice</td><td class="py-2 px-3">WebSocket/IPC connections</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="dark:bg-dark-900 rounded-xl border border-yellow-500/30 p-6 mt-4">
+                    <h4 class="font-bold text-yellow-400 mb-2">&#x26A0;&#xFE0F; context.ts e Diferente</h4>
+                    <p class="dark:text-gray-300 text-sm">O arquivo top-level <code>context.ts</code> (nao <code>context/</code>) e inteiramente nao-relacionado a React Context. Ele constroi o system prompt injetado em cada API call: <code>getSystemContext()</code> (git status, cache breaker) e <code>getUserContext()</code> (CLAUDE.md files, current date).</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary -->
+        <section class="mb-16">
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6">
+                <h3 class="text-xl font-bold text-emerald-400 mb-4">&#x1F4CB; Resumo do Modulo</h3>
+                <div class="space-y-3">
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 mt-0.5">&#x2705;</span>
+                        <span><code>createStore&lt;T&gt;</code> em 35 linhas implementa exatamente a interface que <code>useSyncExternalStore</code> precisa -- sem biblioteca</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 mt-0.5">&#x2705;</span>
+                        <span><code>setState</code> recebe updater function, nao partial. <code>Object.is</code> bail-out previne re-renders espurios</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 mt-0.5">&#x2705;</span>
+                        <span>AppState e enorme de proposito -- single source of truth para toda a sessao</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 mt-0.5">&#x2705;</span>
+                        <span><code>onChangeAppState</code> centraliza todos os side effects em um unico diff observer</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 mt-0.5">&#x2705;</span>
+                        <span>Selectors usam <code>Pick&lt;AppState, ...&gt;</code> para testabilidade; transition helpers recebem <code>setAppState</code> como argumento</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 mt-0.5">&#x2705;</span>
+                        <span>Retain/evict lifecycle para agent tasks e gerenciado inteiramente via campos no AppState</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Navigation -->
+        <div class="flex items-center justify-between">
+            <a href="modulo-1-2.html" class="flex items-center gap-2 dark:text-gray-400 hover:text-emerald-400 transition-colors">
+                <span>&#x2190;</span> Modulo Anterior
+            </a>
+            <a href="modulo-1-4.html" class="flex items-center gap-2 text-emerald-400 hover:text-emerald-300 transition-colors font-medium">
+                Proximo Modulo <span>&#x2192;</span>
+            </a>
+        </div>
+
+    </main>
+
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.classList.contains('dark');
+            html.classList.toggle('dark', !isDark);
+            html.classList.toggle('light', isDark);
+            localStorage.setItem('theme', isDark ? 'light' : 'dark');
+        }
+        (function() {
+            const saved = localStorage.getItem('theme');
+            if (saved === 'light') {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+            }
+        })();
+    </script>
+</body>
+</html>

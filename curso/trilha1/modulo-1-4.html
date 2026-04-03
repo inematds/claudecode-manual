@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modulo 1.4 System Prompt - Claude Code Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: { 400: '#34d399', 500: '#10b981', 600: '#059669', 700: '#047857', 800: '#065f46', 900: '#064e3b' },
+                        dark: { 800: '#1e293b', 900: '#0f172a', 950: '#020617' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html.light { background: #f8fafc; color: #1e293b; }
+        html.light .dark\:bg-dark-950 { background: #f8fafc !important; }
+        html.light .dark\:bg-dark-900 { background: #ffffff !important; }
+        html.light .dark\:bg-dark-800 { background: #f1f5f9 !important; }
+        html.light .dark\:bg-dark-900\/50 { background: rgba(255,255,255,0.8) !important; }
+        html.light .dark\:bg-dark-800\/50 { background: rgba(241,245,249,0.8) !important; }
+        html.light .dark\:text-white { color: #1e293b !important; }
+        html.light .dark\:text-gray-100 { color: #334155 !important; }
+        html.light .dark\:text-gray-300 { color: #475569 !important; }
+        html.light .dark\:text-gray-400 { color: #64748b !important; }
+        html.light .dark\:text-gray-500 { color: #94a3b8 !important; }
+        html.light .dark\:border-gray-700 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-800 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-700\/50 { border-color: rgba(226,232,240,0.5) !important; }
+        html.light .text-emerald-400 { color: #059669 !important; }
+        html.light .text-emerald-500 { color: #047857 !important; }
+        html.light .bg-emerald-500\/10 { background: rgba(5,150,105,0.08) !important; }
+        html.light .bg-emerald-500\/20 { background: rgba(5,150,105,0.12) !important; }
+        html.light .border-emerald-500\/30 { border-color: rgba(5,150,105,0.2) !important; }
+        html.light .from-emerald-900\/30 { --tw-gradient-from: rgba(5,150,105,0.08) !important; }
+        html.light nav { background: rgba(255,255,255,0.85) !important; border-bottom: 1px solid #e2e8f0 !important; }
+        html.light .dark\:hover\:bg-dark-800:hover { background: #e2e8f0 !important; }
+    </style>
+</head>
+<body class="dark:bg-dark-950 dark:text-white font-sans min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-40 backdrop-blur-xl dark:bg-dark-900/50 border-b dark:border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
+            <a href="../../index.html" class="text-yellow-400 font-bold text-lg whitespace-nowrap">&#x1F4BB; Claude Code Deep Dive</a>
+            <span class="dark:text-gray-600">|</span>
+            <a href="https://inema.club" target="_blank" class="text-sky-400 text-sm font-medium hover:underline">INEMA.CLUB</a>
+            <div class="flex items-center gap-1 ml-auto flex-wrap">
+                <a href="../trilha1/" class="px-2 py-1 text-xs font-bold rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"><span class="hidden md:inline">Core Architecture</span><span class="md:hidden">T1</span></a>
+                <a href="../trilha2/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Tool System</span><span class="md:hidden">T2</span></a>
+                <a href="../trilha3/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Agent Intelligence</span><span class="md:hidden">T3</span></a>
+                <a href="../trilha4/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Interface</span><span class="md:hidden">T4</span></a>
+                <a href="#" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Security</span><span class="md:hidden">T5</span></a>
+                <a href="#" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Performance</span><span class="md:hidden">T6</span></a>
+                <a href="#" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Testing</span><span class="md:hidden">T7</span></a>
+                <a href="#" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Advanced</span><span class="md:hidden">T8</span></a>
+                <button onclick="toggleTheme()" class="ml-2 p-2 rounded-lg dark:hover:bg-dark-800 dark:text-gray-400" title="Alternar tema">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <div class="max-w-5xl mx-auto px-4 pt-6 pb-2">
+        <nav class="flex items-center gap-2 text-sm dark:text-gray-400">
+            <a href="../../index.html" class="hover:text-emerald-400 transition-colors">Inicio</a>
+            <span>/</span>
+            <a href="./" class="hover:text-emerald-400 transition-colors">Trilha 1</a>
+            <span>/</span>
+            <span class="text-emerald-400 font-medium">Modulo 1.4</span>
+        </nav>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-gradient-to-b from-emerald-900/30 to-transparent py-12 px-4">
+        <div class="max-w-5xl mx-auto">
+            <span class="inline-block px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 rounded-full border border-emerald-500/30 mb-4">MODULO 1.4</span>
+            <h1 class="text-3xl md:text-4xl font-extrabold mb-3">&#x1F4DC; System Prompt Construction</h1>
+            <p class="text-lg dark:text-gray-300 max-w-3xl mb-6">Como o Claude Code monta um system prompt de milhares de tokens a partir de secoes composiveis, cache boundaries e CLAUDE.md files. A arquitetura separa concerns: <code class="bg-emerald-500/10 px-2 py-0.5 rounded text-emerald-400 text-sm">prompts.ts</code> possui conteudo, <code class="bg-emerald-500/10 px-2 py-0.5 rounded text-emerald-400 text-sm">systemPrompt.ts</code> possui logica de prioridade, <code class="bg-emerald-500/10 px-2 py-0.5 rounded text-emerald-400 text-sm">systemPromptSections.ts</code> possui o registro de caching.</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-xl">
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-emerald-400">7</div>
+                    <div class="text-xs dark:text-gray-400">Topicos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-emerald-400">~100</div>
+                    <div class="text-xs dark:text-gray-400">Minutos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-emerald-400">Deep</div>
+                    <div class="text-xs dark:text-gray-400">Nivel</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-emerald-400">Source</div>
+                    <div class="text-xs dark:text-gray-400">Tipo</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 pb-20">
+
+        <!-- Topic 1: Six-Layer Architecture -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-emerald-500/30">1</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F3AF; Six-Layer Architecture</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <div class="space-y-3">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-emerald-500">
+                        <h4 class="font-bold text-emerald-400 mb-1">Layer 1 -- Priority Resolver</h4>
+                        <p class="dark:text-gray-300 text-sm"><code>systemPrompt.ts</code> implementa override > coordinator > agent > custom > default</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-emerald-500">
+                        <h4 class="font-bold text-emerald-400 mb-1">Layer 2 -- Content Factory</h4>
+                        <p class="dark:text-gray-300 text-sm"><code>prompts.ts</code> monta secoes estaticas + dinamicas por sessao</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-emerald-500">
+                        <h4 class="font-bold text-emerald-400 mb-1">Layer 3 -- Section Registry</h4>
+                        <p class="dark:text-gray-300 text-sm"><code>systemPromptSections.ts</code> gerencia caching memoized vs. volatile</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-emerald-500">
+                        <h4 class="font-bold text-emerald-400 mb-1">Layer 4 -- CLAUDE.md Loader</h4>
+                        <p class="dark:text-gray-300 text-sm"><code>claudemd.ts</code> lida com descoberta multi-scope, @include, frontmatter</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-emerald-500">
+                        <h4 class="font-bold text-emerald-400 mb-1">Layer 5 -- Memory System</h4>
+                        <p class="dark:text-gray-300 text-sm"><code>memdir/memdir.ts</code> injeta MEMORY.md + auto-memory</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-emerald-500">
+                        <h4 class="font-bold text-emerald-400 mb-1">Layer 6 -- Cache Boundary</h4>
+                        <p class="dark:text-gray-300 text-sm"><code>SYSTEM_PROMPT_DYNAMIC_BOUNDARY</code> separa prefixo de escopo global</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Topic 2: Priority Resolver -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-emerald-500/30">2</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F3AF; Priority Resolver - Which Prompt Runs?</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4"><code class="text-emerald-400">buildEffectiveSystemPrompt()</code> implementa um waterfall estrito de prioridades. Uma vez que uma fonte de maior prioridade e encontrada, camadas inferiores sao ignoradas.</p>
+
+                <div class="space-y-3 mb-6">
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="bg-emerald-500/20 text-emerald-400 font-bold rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 text-xs">1</span>
+                        <span><strong class="text-emerald-400">overrideSystemPrompt</strong> (loop mode) -- retorna override sozinho; todas as outras fontes ignoradas</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="bg-emerald-500/20 text-emerald-400 font-bold rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 text-xs">2</span>
+                        <span><strong class="text-emerald-400">COORDINATOR_MODE</strong> -- retorna coordinator prompt + appendSystemPrompt</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="bg-emerald-500/20 text-emerald-400 font-bold rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 text-xs">3</span>
+                        <span><strong class="text-emerald-400">mainThreadAgentDefinition</strong> -- PROACTIVE: default + agent instructions; Normal: agent prompt only</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="bg-emerald-500/20 text-emerald-400 font-bold rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 text-xs">4</span>
+                        <span><strong class="text-emerald-400">customSystemPrompt</strong> (--system-prompt flag) -- retorna custom + appendSystemPrompt</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="bg-emerald-500/20 text-emerald-400 font-bold rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 text-xs">5</span>
+                        <span><strong class="text-emerald-400">Default</strong> -- retorna default prompt + appendSystemPrompt</span>
+                    </div>
+                </div>
+
+                <div class="dark:bg-dark-900 rounded-xl border border-emerald-500/30 p-6 bg-gradient-to-r from-emerald-500/5 to-transparent">
+                    <h4 class="font-bold text-emerald-400 mb-2">&#x1F4A1; Insight-chave</h4>
+                    <p class="dark:text-gray-300 text-sm"><code>appendSystemPrompt</code> sempre anexa a todo branch <em>exceto</em> quando <code>overrideSystemPrompt</code> esta ativo. Em modo proactive/KAIROS, instrucoes do agente sao <em>appended</em> ao prompt default ao inves de substitui-lo.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Topic 3: Content Factory -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-emerald-500/30">3</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F3ED; Content Factory - getSystemPrompt()</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <pre class="bg-gray-900 rounded-lg p-4 overflow-x-auto mb-6"><code class="text-sm text-gray-300">export async function getSystemPrompt(tools, model, additionalDirs, mcpClients) {
+  const [skillToolCommands, outputStyleConfig, envInfo] = await Promise.all([
+    getSkillToolCommands(cwd),
+    getOutputStyleConfig(),
+    computeSimpleEnvInfo(model, additionalDirs),
+  ])
+
+  return [
+    // -- Static (globally cacheable) --
+    getSimpleIntroSection(outputStyleConfig),
+    getSimpleSystemSection(),
+    getSimpleDoingTasksSection(),
+    getActionsSection(),
+    getUsingYourToolsSection(enabledTools),
+    getSimpleToneAndStyleSection(),
+    getOutputEfficiencySection(),
+    // -- Boundary marker --
+    SYSTEM_PROMPT_DYNAMIC_BOUNDARY,
+    // -- Dynamic (session-specific) --
+    ...resolvedDynamicSections,
+  ].filter(s =&gt; s !== null)
+}</code></pre>
+
+                <h4 class="font-bold text-emerald-400 mb-3">Referencia de Secoes Estaticas</h4>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b dark:border-gray-700">
+                                <th class="text-left py-2 px-3 text-emerald-400 font-bold">Secao</th>
+                                <th class="text-left py-2 px-3 text-emerald-400 font-bold">Conteudo</th>
+                            </tr>
+                        </thead>
+                        <tbody class="dark:text-gray-300">
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 px-3 font-mono text-xs">getSimpleIntroSection()</td><td class="py-2 px-3">Identidade, URL-generation guard, CYBER_RISK_INSTRUCTION</td></tr>
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 px-3 font-mono text-xs">getSimpleSystemSection()</td><td class="py-2 px-3">Markdown rendering, permission-mode, prompt-injection warning</td></tr>
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 px-3 font-mono text-xs">getSimpleDoingTasksSection()</td><td class="py-2 px-3">Task scope, YAGNI, security hygiene, code-style</td></tr>
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 px-3 font-mono text-xs">getActionsSection()</td><td class="py-2 px-3">Reversibility, blast-radius guidance, risky action taxonomy</td></tr>
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 px-3 font-mono text-xs">getUsingYourToolsSection()</td><td class="py-2 px-3">Prefer dedicated tools, parallel calls, task-tracking</td></tr>
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 px-3 font-mono text-xs">getSimpleToneAndStyleSection()</td><td class="py-2 px-3">No emojis, file:line references, GitHub format</td></tr>
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 px-3 font-mono text-xs">getOutputEfficiencySection()</td><td class="py-2 px-3">Conciseness/prose quality rules</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Topic 4: Dynamic Sections -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-emerald-500/30">4</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F4CB; Dynamic Sections Registry</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <pre class="bg-gray-900 rounded-lg p-4 overflow-x-auto mb-4"><code class="text-sm text-gray-300">// Memoized -- computed once per session
+export function systemPromptSection(name, compute): SystemPromptSection {
+  return { name, compute, cacheBreak: false }
+}
+
+// Volatile -- recomputes every turn
+export function DANGEROUS_uncachedSystemPromptSection(name, compute, reason) {
+  return { name, compute, cacheBreak: true }
+}</code></pre>
+
+                <div class="overflow-x-auto mb-4">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b dark:border-gray-700">
+                                <th class="text-left py-2 px-3 text-emerald-400 font-bold">Section</th>
+                                <th class="text-left py-2 px-3 text-emerald-400 font-bold">Cache</th>
+                                <th class="text-left py-2 px-3 text-emerald-400 font-bold">Conteudo</th>
+                            </tr>
+                        </thead>
+                        <tbody class="dark:text-gray-300">
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 px-3 font-mono text-xs">session_guidance</td><td class="py-2 px-3">memo</td><td class="py-2 px-3">Ask-user, interactive shell, skill syntax</td></tr>
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 px-3 font-mono text-xs">memory</td><td class="py-2 px-3">memo</td><td class="py-2 px-3">CLAUDE.md hierarchy + MEMORY.md</td></tr>
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 px-3 font-mono text-xs">env_info_simple</td><td class="py-2 px-3">memo</td><td class="py-2 px-3">CWD, git, platform, model, cutoff</td></tr>
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 px-3 font-mono text-xs">language</td><td class="py-2 px-3">memo</td><td class="py-2 px-3">"Always respond in X"</td></tr>
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 px-3 font-mono text-xs">output_style</td><td class="py-2 px-3">memo</td><td class="py-2 px-3">Named output style from settings</td></tr>
+                            <tr class="border-b dark:border-gray-800 bg-yellow-500/5"><td class="py-2 px-3 font-mono text-xs text-yellow-400">mcp_instructions</td><td class="py-2 px-3 text-yellow-400 font-bold">volatile</td><td class="py-2 px-3">Per-server instruction blocks</td></tr>
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 px-3 font-mono text-xs">scratchpad</td><td class="py-2 px-3">memo</td><td class="py-2 px-3">Per-session scratchpad path and rules</td></tr>
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 px-3 font-mono text-xs">token_budget</td><td class="py-2 px-3">memo</td><td class="py-2 px-3">"Keep working until target" instruction</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="dark:bg-dark-900 rounded-xl border border-yellow-500/30 p-6">
+                    <h4 class="font-bold text-yellow-400 mb-2">&#x26A0;&#xFE0F; Por que mcp_instructions e volatile?</h4>
+                    <p class="dark:text-gray-300 text-sm">"MCP servers can connect and disconnect between turns. If the instructions were cached, a server that connects after the first turn would never get injected." O custo e potencialmente bustar o prompt cache em eventos de connect/disconnect.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Topic 5: Cache Boundary -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-emerald-500/30">5</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F4B0; The Cache Boundary</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4">A API do Claude suporta prompt caching: prefixos identicos sao cobrados a uma fracao do custo normal. Para explorar isso, o system prompt se divide em um <strong>prefixo estavel</strong> (mesmo para todos os usuarios) e um <strong>tail volatil</strong> (conteudo por sessao).</p>
+
+                <pre class="bg-gray-900 rounded-lg p-4 overflow-x-auto mb-4"><code class="text-sm text-gray-300">export const SYSTEM_PROMPT_DYNAMIC_BOUNDARY = '__SYSTEM_PROMPT_DYNAMIC_BOUNDARY__'
+
+// WARNING: Do not remove or reorder this marker without updating cache logic in:
+// - src/utils/api.ts (splitSysPromptPrefix)
+// - src/services/api/claude.ts (buildSystemPromptBlocks)</code></pre>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border border-emerald-500/30">
+                        <h4 class="font-bold text-emerald-400 mb-2">&#x2705; Static Prefix (global cache)</h4>
+                        <ul class="dark:text-gray-300 text-sm space-y-1 list-disc pl-4">
+                            <li>Intro</li>
+                            <li>System</li>
+                            <li>Doing Tasks</li>
+                            <li>Actions</li>
+                            <li>Tools</li>
+                            <li>Tone</li>
+                            <li>Output Efficiency</li>
+                        </ul>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border border-blue-500/30">
+                        <h4 class="font-bold text-blue-400 mb-2">&#x1F504; Dynamic Tail (per-session)</h4>
+                        <ul class="dark:text-gray-300 text-sm space-y-1 list-disc pl-4">
+                            <li>Session Guidance</li>
+                            <li>Memory/CLAUDE.md</li>
+                            <li>Env Info</li>
+                            <li>Language</li>
+                            <li>Output Style</li>
+                            <li>MCP Instructions</li>
+                            <li>Scratchpad, FRC, Token Budget</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="dark:bg-dark-900 rounded-xl border border-yellow-500/30 p-6 mt-4">
+                    <h4 class="font-bold text-yellow-400 mb-2">&#x26A0;&#xFE0F; Engineering Constraint</h4>
+                    <p class="dark:text-gray-300 text-sm">Qualquer expressao condicional de runtime colocada <em>antes</em> da boundary multiplica o numero de hashes de prefixo de cache distintos por 2 por condicao. Engenheiros explicitamente moveram flags session-specific para apos a boundary por exatamente esta razao.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Topic 6: CLAUDE.md -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-emerald-500/30">6</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F4C2; CLAUDE.md Injection</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <h4 class="font-bold text-emerald-400 mb-3">Load Order (prioridade crescente)</h4>
+                <div class="space-y-2 mb-6">
+                    <div class="flex items-center gap-3 dark:text-gray-300 text-sm">
+                        <span class="bg-emerald-500/20 text-emerald-400 font-bold rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 text-xs">1</span>
+                        <span><strong>Managed memory</strong> (<code>/etc/claude-code/CLAUDE.md</code>) -- Global para todos os usuarios</span>
+                    </div>
+                    <div class="flex items-center gap-3 dark:text-gray-300 text-sm">
+                        <span class="bg-emerald-500/20 text-emerald-400 font-bold rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 text-xs">2</span>
+                        <span><strong>User memory</strong> (<code>~/.claude/CLAUDE.md</code>) -- Global privado por projeto</span>
+                    </div>
+                    <div class="flex items-center gap-3 dark:text-gray-300 text-sm">
+                        <span class="bg-emerald-500/20 text-emerald-400 font-bold rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 text-xs">3</span>
+                        <span><strong>Project memory</strong> (<code>CLAUDE.md</code> / <code>.claude/CLAUDE.md</code> / <code>.claude/rules/*.md</code>)</span>
+                    </div>
+                    <div class="flex items-center gap-3 dark:text-gray-300 text-sm">
+                        <span class="bg-emerald-500/20 text-emerald-400 font-bold rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 text-xs">4</span>
+                        <span><strong>Local memory</strong> (<code>CLAUDE.local.md</code>) -- Privado especifico do projeto</span>
+                    </div>
+                </div>
+
+                <h4 class="font-bold text-emerald-400 mb-3">A Diretiva @include</h4>
+                <pre class="bg-gray-900 rounded-lg p-4 overflow-x-auto mb-4"><code class="text-sm text-gray-300"># CLAUDE.md
+@shared-rules.md                    # relative path (same dir)
+@./scripts/lint-conventions.md      # explicit relative
+@~/company/global-standards.md      # home-relative
+@/absolute/path/to/rules.md        # absolute</code></pre>
+                <p class="dark:text-gray-300 text-sm mb-4">Arquivos incluidos sao inseridos como entradas separadas <em>antes</em> do arquivo que os inclui. Referencias circulares sao prevenidas via set de caminhos processados.</p>
+
+                <h4 class="font-bold text-emerald-400 mb-3">Frontmatter Path Filtering</h4>
+                <pre class="bg-gray-900 rounded-lg p-4 overflow-x-auto mb-4"><code class="text-sm text-gray-300">---
+paths:
+  - src/components/**
+  - "*.tsx"
+---
+Always use named exports in React components.</code></pre>
+
+                <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-blue-500">
+                    <h4 class="font-bold text-blue-400 mb-2">&#x1F4CA; MEMORY.md Limits</h4>
+                    <p class="dark:text-gray-300 text-sm">Auto-memory (<code>memdir/memdir.ts</code>) trunca MEMORY.md em <strong>200 linhas</strong> ou <strong>25,000 bytes</strong>, o que disparar primeiro, com warning anexado se truncado.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Topic 7: Escape Hatches -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-emerald-500/30">7</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F916; Subagent Enhancement &amp; Escape Hatches</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <h4 class="font-bold text-emerald-400 mb-3">CLAUDE_CODE_SIMPLE=1</h4>
+                <p class="dark:text-gray-300 text-sm mb-3">Ativa um system prompt de tres linhas -- sem instrucoes, sem CLAUDE.md, sem tool guidance. Util para benchmarking da capability raw do modelo.</p>
+
+                <pre class="bg-gray-900 rounded-lg p-4 overflow-x-auto mb-6"><code class="text-sm text-gray-300">if (isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)) {
+  return [`You are Claude Code...\n\nCWD: ${getCwd()}\nDate: ${getSessionStartDate()}`]
+}</code></pre>
+
+                <h4 class="font-bold text-emerald-400 mb-3">Subagents</h4>
+                <p class="dark:text-gray-300 text-sm mb-3">Subagents lancados por <code>AgentTool</code> nao passam por <code>getSystemPrompt()</code>. Eles partem de <code>DEFAULT_AGENT_PROMPT</code> e sao enriquecidos com <code>enhanceSystemPromptWithEnvDetails()</code>.</p>
+
+                <pre class="bg-gray-900 rounded-lg p-4 overflow-x-auto mb-4"><code class="text-sm text-gray-300">export const DEFAULT_AGENT_PROMPT = `You are an agent for Claude Code,
+Anthropic's official CLI for Claude. Given the user's message, you should
+use the tools available to complete the task. Complete the task fully--
+don't gold-plate, but don't leave it half-done.`</code></pre>
+
+                <h4 class="font-bold text-emerald-400 mb-3">Proactive / KAIROS Mode</h4>
+                <p class="dark:text-gray-300 text-sm mb-3">Retorna um prompt curto de identidade de agente autonomo ao inves do prompt completo de sessao interativa:</p>
+
+                <pre class="bg-gray-900 rounded-lg p-4 overflow-x-auto"><code class="text-sm text-gray-300">return [
+  `\nYou are an autonomous agent. Use the available tools...\n\n${CYBER_RISK_INSTRUCTION}`,
+  getSystemRemindersSection(),
+  await loadMemoryPrompt(),
+  envInfo,
+  getLanguageSection(settings.language),
+  getMcpInstructionsSection(mcpClients),
+  getScratchpadInstructions(),
+  getProactiveSection(),
+].filter(s =&gt; s !== null)</code></pre>
+            </div>
+        </section>
+
+        <!-- Summary -->
+        <section class="mb-16">
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6">
+                <h3 class="text-xl font-bold text-emerald-400 mb-4">&#x1F4CB; Resumo do Modulo</h3>
+                <div class="space-y-3">
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 mt-0.5">&#x2705;</span>
+                        <span><code>buildEffectiveSystemPrompt()</code> implementa waterfall estrito: override > coordinator > agent > custom > default</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 mt-0.5">&#x2705;</span>
+                        <span>O prompt divide em metade estatica (cache global) e tail dinamico (por sessao) separados pelo boundary marker</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 mt-0.5">&#x2705;</span>
+                        <span>Secoes dinamicas sao gerenciadas por registro nomeado; apenas <code>mcp_instructions</code> e volatile</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 mt-0.5">&#x2705;</span>
+                        <span>CLAUDE.md carrega em 4 scopes com files mais proximos do CWD tendo maior prioridade</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 mt-0.5">&#x2705;</span>
+                        <span>Subagents bypass <code>getSystemPrompt()</code> e partem de <code>DEFAULT_AGENT_PROMPT</code></span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-emerald-400 mt-0.5">&#x2705;</span>
+                        <span>Escape hatches: <code>CLAUDE_CODE_SIMPLE=1</code> para stub, proactive mode para identidade autonoma</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Navigation -->
+        <div class="flex items-center justify-between">
+            <a href="modulo-1-3.html" class="flex items-center gap-2 dark:text-gray-400 hover:text-emerald-400 transition-colors">
+                <span>&#x2190;</span> Modulo Anterior
+            </a>
+            <a href="modulo-1-5.html" class="flex items-center gap-2 text-emerald-400 hover:text-emerald-300 transition-colors font-medium">
+                Proximo Modulo <span>&#x2192;</span>
+            </a>
+        </div>
+
+    </main>
+
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.classList.contains('dark');
+            html.classList.toggle('dark', !isDark);
+            html.classList.toggle('light', isDark);
+            localStorage.setItem('theme', isDark ? 'light' : 'dark');
+        }
+        (function() {
+            const saved = localStorage.getItem('theme');
+            if (saved === 'light') {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+            }
+        })();
+    </script>
+</body>
+</html>
