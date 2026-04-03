@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modulo 4.2 Commands System - Claude Code Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true, theme:'dark'});</script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: { 400: '#fbbf24', 500: '#f59e0b', 600: '#d97706', 700: '#b45309', 800: '#92400e', 900: '#78350f' },
+                        dark: { 800: '#1e293b', 900: '#0f172a', 950: '#020617' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html.light { background: #f8fafc; color: #1e293b; }
+        html.light .dark\:bg-dark-950 { background: #f8fafc !important; }
+        html.light .dark\:bg-dark-900 { background: #ffffff !important; }
+        html.light .dark\:bg-dark-800 { background: #f1f5f9 !important; }
+        html.light .dark\:bg-dark-900\/50 { background: rgba(255,255,255,0.8) !important; }
+        html.light .dark\:bg-dark-800\/50 { background: rgba(241,245,249,0.8) !important; }
+        html.light .dark\:text-white { color: #1e293b !important; }
+        html.light .dark\:text-gray-100 { color: #334155 !important; }
+        html.light .dark\:text-gray-300 { color: #475569 !important; }
+        html.light .dark\:text-gray-400 { color: #64748b !important; }
+        html.light .dark\:text-gray-500 { color: #94a3b8 !important; }
+        html.light .dark\:border-gray-700 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-800 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-700\/50 { border-color: rgba(226,232,240,0.5) !important; }
+        html.light .text-amber-400 { color: #92400e !important; }
+        html.light .text-amber-500 { color: #b45309 !important; }
+        html.light .bg-amber-500\/10 { background: rgba(180,83,9,0.08) !important; }
+        html.light .bg-amber-500\/20 { background: rgba(180,83,9,0.12) !important; }
+        html.light .border-amber-500\/30 { border-color: rgba(180,83,9,0.2) !important; }
+        html.light .from-amber-900\/30 { --tw-gradient-from: rgba(180,83,9,0.08) !important; }
+        html.light nav { background: rgba(255,255,255,0.85) !important; border-bottom: 1px solid #e2e8f0 !important; }
+        html.light .dark\:hover\:bg-dark-800:hover { background: #e2e8f0 !important; }
+    </style>
+</head>
+<body class="dark:bg-dark-950 dark:text-white font-sans min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-40 backdrop-blur-xl dark:bg-dark-900/50 border-b dark:border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
+            <a href="../../index.html" class="text-yellow-400 font-bold text-lg whitespace-nowrap">&#x1F4BB; Claude Code Deep Dive</a>
+            <span class="dark:text-gray-600">|</span>
+            <a href="https://inema.club" target="_blank" class="text-sky-400 text-sm font-medium hover:underline">INEMA.CLUB</a>
+            <div class="flex items-center gap-1 ml-auto flex-wrap">
+                <a href="../trilha1/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Core Architecture</span><span class="md:hidden">T1</span></a>
+                <a href="../trilha2/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Tool System</span><span class="md:hidden">T2</span></a>
+                <a href="../trilha3/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Agent Intelligence</span><span class="md:hidden">T3</span></a>
+                <a href="../trilha4/" class="px-2 py-1 text-xs font-bold rounded bg-amber-500/20 text-amber-400 border border-amber-500/30"><span class="hidden md:inline">The Interface</span><span class="md:hidden">T4</span></a>
+                <a href="../trilha5/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Security</span><span class="md:hidden">T5</span></a>
+                <a href="../trilha6/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Performance</span><span class="md:hidden">T6</span></a>
+                <a href="../trilha7/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Testing</span><span class="md:hidden">T7</span></a>
+                <a href="../trilha8/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Advanced</span><span class="md:hidden">T8</span></a>
+                <button onclick="toggleTheme()" class="ml-2 p-2 rounded-lg dark:hover:bg-dark-800 dark:text-gray-400" title="Alternar tema">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <div class="max-w-5xl mx-auto px-4 pt-6 pb-2">
+        <nav class="flex items-center gap-2 text-sm dark:text-gray-400">
+            <a href="../../index.html" class="hover:text-amber-400 transition-colors">Inicio</a>
+            <span>/</span>
+            <a href="./" class="hover:text-amber-400 transition-colors">Trilha 4</a>
+            <span>/</span>
+            <span class="text-amber-400 font-medium">Modulo 4.2</span>
+        </nav>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-gradient-to-b from-amber-900/30 to-transparent py-12 px-4">
+        <div class="max-w-5xl mx-auto">
+            <span class="inline-block px-3 py-1 text-xs font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 rounded-full border border-amber-500/30 mb-4">MODULO 4.2</span>
+            <h1 class="text-3xl md:text-4xl font-extrabold mb-3">&#x2328;&#xFE0F; Commands System</h1>
+            <p class="text-lg dark:text-gray-300 max-w-3xl mb-6">Como slash commands funcionam dentro do Claude Code, incluindo seus tipos, pipeline de registro, processamento de input e integracao com o REPL.</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-xl">
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-amber-400">6</div>
+                    <div class="text-xs dark:text-gray-400">Topicos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-amber-400">~45</div>
+                    <div class="text-xs dark:text-gray-400">Minutos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-amber-400">Deep</div>
+                    <div class="text-xs dark:text-gray-400">Nivel</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-amber-400">Source</div>
+                    <div class="text-xs dark:text-gray-400">Tipo</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 pb-20">
+
+        <!-- Section 1: Three Command Types -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-amber-500/30">1</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F4E6; Tres Tipos de Comandos</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <div class="space-y-4">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-green-500">
+                        <h4 class="font-bold text-green-400 mb-1">Local Commands</h4>
+                        <p class="dark:text-gray-300 text-sm">Funcoes TypeScript puras, sincronas. Exemplos: <code class="text-amber-400">/clear</code>, <code class="text-amber-400">/compact</code>, <code class="text-amber-400">/cost</code></p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-purple-500">
+                        <h4 class="font-bold text-purple-400 mb-1">Local JSX Commands</h4>
+                        <p class="dark:text-gray-300 text-sm">Renderizam componentes React/Ink. Exemplos: <code class="text-amber-400">/help</code>, <code class="text-amber-400">/model</code>, <code class="text-amber-400">/config</code>, <code class="text-amber-400">/memory</code></p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-orange-500">
+                        <h4 class="font-bold text-orange-400 mb-1">Prompt Commands</h4>
+                        <p class="dark:text-gray-300 text-sm">Expandem para blocos de conteudo enviados ao modelo. Exemplos: <code class="text-amber-400">/commit</code>, <code class="text-amber-400">/review</code>, <code class="text-amber-400">/init</code></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mermaid: Type Decision Tree -->
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <h4 class="font-bold text-amber-400 mb-4">&#x1F5FA;&#xFE0F; Arvore de Decisao de Tipos</h4>
+                <div class="overflow-x-auto">
+                    <pre class="mermaid">
+flowchart TD
+    A[User types /cmd] --> B{Does it need\nto render UI?}
+    B -- Yes --> C[local-jsx\ne.g. /model, /help]
+    B -- No --> D{Does it call\nthe AI model?}
+    D -- Yes --> E[prompt\ne.g. /commit, /review]
+    D -- No --> F[local\ne.g. /clear, /compact, /cost]
+                    </pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Registration Pipeline -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-amber-500/30">2</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F527; Pipeline de Registro</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <div class="dark:bg-dark-800 rounded-lg p-4 mb-4">
+                    <pre class="text-sm text-amber-400 overflow-x-auto"><code>Static COMMANDS() + Skills dirs + Plugins + Workflows
+-> loadAllCommands(cwd)
+-> filter(availability + isEnabled)
+-> getCommands(cwd)</code></pre>
+                </div>
+
+                <h4 class="font-bold text-amber-400 mb-3">Quatro Fontes de Skills</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                    <div class="dark:bg-dark-800 rounded-lg p-3 border border-amber-500/30">
+                        <div class="font-bold text-amber-400 text-sm">skillDirCommands</div>
+                        <div class="text-xs dark:text-gray-400"><code>.claude/skills/</code></div>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-3 border border-amber-500/30">
+                        <div class="font-bold text-amber-400 text-sm">pluginSkills</div>
+                        <div class="text-xs dark:text-gray-400">Plugins instalados</div>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-3 border border-amber-500/30">
+                        <div class="font-bold text-amber-400 text-sm">bundledSkills</div>
+                        <div class="text-xs dark:text-gray-400">Compilados no binario</div>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-3 border border-amber-500/30">
+                        <div class="font-bold text-amber-400 text-sm">builtinPluginSkills</div>
+                        <div class="text-xs dark:text-gray-400">Plugins built-in sempre ativos</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Two Independent Gates -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-amber-500/30">3</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F512; Dois Gates Independentes</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-amber-500">
+                        <h4 class="font-bold text-amber-400 mb-1">availability</h4>
+                        <p class="dark:text-gray-300 text-sm">Verificacao estatica de auth-provider (<code class="text-amber-400">claude-ai</code> ou <code class="text-amber-400">console</code>)</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-amber-500">
+                        <h4 class="font-bold text-amber-400 mb-1">isEnabled()</h4>
+                        <p class="dark:text-gray-300 text-sm">Verificacao runtime de feature-flag</p>
+                    </div>
+                </div>
+                <div class="dark:bg-dark-900 rounded-xl border border-amber-500/30 p-6 mt-4 bg-gradient-to-r from-amber-500/5 to-transparent">
+                    <h4 class="font-bold text-amber-400 mb-2">&#x1F4A1; Conceito-chave</h4>
+                    <p class="dark:text-gray-300 text-sm">Nenhum dos gates e memoizado -- mudancas de autenticacao fazem efeito imediatamente. Lazy loading via <code class="text-amber-400">load: () => import('./cmd.js')</code> evita carregar codigo de comandos nao utilizados.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Shell Command Substitution -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-amber-500/30">4</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F41A; Shell Command Substitution</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4">Prompt commands podem embutir saida de shell ao vivo nos prompts usando backtick com prefixo <code class="text-amber-400">!</code>:</p>
+                <div class="dark:bg-dark-800 rounded-lg p-4">
+                    <pre class="text-sm text-amber-400 overflow-x-auto"><code>const PROMPT = `
+- Current git status: !`git status`
+- Current git diff: !`git diff HEAD`
+`</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: Bridge & Remote Mode -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-amber-500/30">5</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F310; Bridge &amp; Remote Mode</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b dark:border-gray-700">
+                                <th class="text-left py-2 px-3 text-amber-400 font-bold">Tipo</th>
+                                <th class="text-left py-2 px-3 text-amber-400 font-bold">Bridge Mode</th>
+                                <th class="text-left py-2 px-3 text-amber-400 font-bold">Razao</th>
+                            </tr>
+                        </thead>
+                        <tbody class="dark:text-gray-300">
+                            <tr class="border-b dark:border-gray-800">
+                                <td class="py-2 px-3"><code class="text-purple-400">local-jsx</code></td>
+                                <td class="py-2 px-3"><span class="text-red-400">Sempre bloqueado</span></td>
+                                <td class="py-2 px-3">Renderiza UI no terminal</td>
+                            </tr>
+                            <tr class="border-b dark:border-gray-800">
+                                <td class="py-2 px-3"><code class="text-orange-400">prompt</code></td>
+                                <td class="py-2 px-3"><span class="text-green-400">Sempre seguro</span></td>
+                                <td class="py-2 px-3">Expande para texto</td>
+                            </tr>
+                            <tr class="border-b dark:border-gray-800">
+                                <td class="py-2 px-3"><code class="text-green-400">local</code></td>
+                                <td class="py-2 px-3"><span class="text-yellow-400">Lista explicita</span></td>
+                                <td class="py-2 px-3">Deve estar em BRIDGE_SAFE_COMMANDS</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 6: Command Dispatch Sequence -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-amber-500/30">6</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F504; Sequencia de Despacho</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <div class="overflow-x-auto">
+                    <pre class="mermaid">
+sequenceDiagram
+    participant U as User Input
+    participant R as REPL
+    participant LC as LocalCommand
+    participant LJ as LocalJSX
+    participant PC as PromptCommand
+    participant M as Model
+    U->>R: /compact "focus on DB"
+    R->>R: findCommand("compact")
+    R->>LC: load() then call(args, ctx)
+    LC-->>R: {type:'compact', ...}
+    R->>R: update messages state
+    U->>R: /model
+    R->>LJ: load() then call(onDone, ctx, args)
+    LJ-->>R: ReactNode (renders picker UI)
+    R->>R: onDone() resume input
+    U->>R: /commit
+    R->>PC: getPromptForCommand(args, ctx)
+    PC-->>R: ContentBlockParam[]
+    R->>M: send as user turn
+    M-->>R: streaming response
+                    </pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary -->
+        <section class="mb-16">
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6">
+                <h3 class="text-xl font-bold text-amber-400 mb-4">&#x1F4CB; Resumo do Modulo</h3>
+                <div class="space-y-3">
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-amber-400 mt-0.5">&#x2705;</span>
+                        <span>Tres tipos de execucao: <code class="text-amber-400">local</code>, <code class="text-amber-400">local-jsx</code>, <code class="text-amber-400">prompt</code></span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-amber-400 mt-0.5">&#x2705;</span>
+                        <span>Lazy loading via <code class="text-amber-400">load: () => import('./cmd.js')</code></span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-amber-400 mt-0.5">&#x2705;</span>
+                        <span>Dois gates independentes (availability + isEnabled) controlam visibilidade</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-amber-400 mt-0.5">&#x2705;</span>
+                        <span>Shell substitution embute output ao vivo em prompts</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-amber-400 mt-0.5">&#x2705;</span>
+                        <span>Comandos internal-only sao eliminados por dead-code-elimination do Bun</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Navigation -->
+        <div class="flex items-center justify-between">
+            <a href="modulo-4-1.html" class="flex items-center gap-2 dark:text-gray-400 hover:text-amber-400 transition-colors">
+                <span>&#x2190;</span> Modulo Anterior
+            </a>
+            <a href="modulo-4-3.html" class="flex items-center gap-2 text-amber-400 hover:text-amber-300 transition-colors font-medium">
+                Proximo Modulo <span>&#x2192;</span>
+            </a>
+        </div>
+
+    </main>
+
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.classList.contains('dark');
+            html.classList.toggle('dark', !isDark);
+            html.classList.toggle('light', isDark);
+            localStorage.setItem('theme', isDark ? 'light' : 'dark');
+        }
+        (function() {
+            const saved = localStorage.getItem('theme');
+            if (saved === 'light') {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+            }
+        })();
+    </script>
+</body>
+</html>

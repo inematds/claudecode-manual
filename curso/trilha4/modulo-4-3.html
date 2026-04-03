@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modulo 4.3 Dialog UI - Claude Code Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true, theme:'dark'});</script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: { 400: '#fbbf24', 500: '#f59e0b', 600: '#d97706', 700: '#b45309', 800: '#92400e', 900: '#78350f' },
+                        dark: { 800: '#1e293b', 900: '#0f172a', 950: '#020617' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html.light { background: #f8fafc; color: #1e293b; }
+        html.light .dark\:bg-dark-950 { background: #f8fafc !important; }
+        html.light .dark\:bg-dark-900 { background: #ffffff !important; }
+        html.light .dark\:bg-dark-800 { background: #f1f5f9 !important; }
+        html.light .dark\:bg-dark-900\/50 { background: rgba(255,255,255,0.8) !important; }
+        html.light .dark\:bg-dark-800\/50 { background: rgba(241,245,249,0.8) !important; }
+        html.light .dark\:text-white { color: #1e293b !important; }
+        html.light .dark\:text-gray-100 { color: #334155 !important; }
+        html.light .dark\:text-gray-300 { color: #475569 !important; }
+        html.light .dark\:text-gray-400 { color: #64748b !important; }
+        html.light .dark\:text-gray-500 { color: #94a3b8 !important; }
+        html.light .dark\:border-gray-700 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-800 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-700\/50 { border-color: rgba(226,232,240,0.5) !important; }
+        html.light .text-amber-400 { color: #92400e !important; }
+        html.light .text-amber-500 { color: #b45309 !important; }
+        html.light .bg-amber-500\/10 { background: rgba(180,83,9,0.08) !important; }
+        html.light .bg-amber-500\/20 { background: rgba(180,83,9,0.12) !important; }
+        html.light .border-amber-500\/30 { border-color: rgba(180,83,9,0.2) !important; }
+        html.light .from-amber-900\/30 { --tw-gradient-from: rgba(180,83,9,0.08) !important; }
+        html.light nav { background: rgba(255,255,255,0.85) !important; border-bottom: 1px solid #e2e8f0 !important; }
+        html.light .dark\:hover\:bg-dark-800:hover { background: #e2e8f0 !important; }
+    </style>
+</head>
+<body class="dark:bg-dark-950 dark:text-white font-sans min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-40 backdrop-blur-xl dark:bg-dark-900/50 border-b dark:border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
+            <a href="../../index.html" class="text-yellow-400 font-bold text-lg whitespace-nowrap">&#x1F4BB; Claude Code Deep Dive</a>
+            <span class="dark:text-gray-600">|</span>
+            <a href="https://inema.club" target="_blank" class="text-sky-400 text-sm font-medium hover:underline">INEMA.CLUB</a>
+            <div class="flex items-center gap-1 ml-auto flex-wrap">
+                <a href="../trilha1/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Core Architecture</span><span class="md:hidden">T1</span></a>
+                <a href="../trilha2/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Tool System</span><span class="md:hidden">T2</span></a>
+                <a href="../trilha3/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Agent Intelligence</span><span class="md:hidden">T3</span></a>
+                <a href="../trilha4/" class="px-2 py-1 text-xs font-bold rounded bg-amber-500/20 text-amber-400 border border-amber-500/30"><span class="hidden md:inline">The Interface</span><span class="md:hidden">T4</span></a>
+                <a href="../trilha5/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Security</span><span class="md:hidden">T5</span></a>
+                <a href="../trilha6/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Performance</span><span class="md:hidden">T6</span></a>
+                <a href="../trilha7/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Testing</span><span class="md:hidden">T7</span></a>
+                <a href="../trilha8/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Advanced</span><span class="md:hidden">T8</span></a>
+                <button onclick="toggleTheme()" class="ml-2 p-2 rounded-lg dark:hover:bg-dark-800 dark:text-gray-400" title="Alternar tema">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <div class="max-w-5xl mx-auto px-4 pt-6 pb-2">
+        <nav class="flex items-center gap-2 text-sm dark:text-gray-400">
+            <a href="../../index.html" class="hover:text-amber-400 transition-colors">Inicio</a>
+            <span>/</span>
+            <a href="./" class="hover:text-amber-400 transition-colors">Trilha 4</a>
+            <span>/</span>
+            <span class="text-amber-400 font-medium">Modulo 4.3</span>
+        </nav>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-gradient-to-b from-amber-900/30 to-transparent py-12 px-4">
+        <div class="max-w-5xl mx-auto">
+            <span class="inline-block px-3 py-1 text-xs font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 rounded-full border border-amber-500/30 mb-4">MODULO 4.3</span>
+            <h1 class="text-3xl md:text-4xl font-extrabold mb-3">&#x1F4AC; Dialog UI</h1>
+            <p class="text-lg dark:text-gray-300 max-w-3xl mb-6">Como o Claude Code renderiza todos os elementos interativos de UI no terminal usando React e Ink, desde launchers ate primitivos de design system.</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-xl">
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-amber-400">7</div>
+                    <div class="text-xs dark:text-gray-400">Topicos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-amber-400">~50</div>
+                    <div class="text-xs dark:text-gray-400">Minutos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-amber-400">Deep</div>
+                    <div class="text-xs dark:text-gray-400">Nivel</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-amber-400">Source</div>
+                    <div class="text-xs dark:text-gray-400">Tipo</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 pb-20">
+
+        <!-- Section 1: Four-Layer Architecture -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-amber-500/30">1</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F3D7;&#xFE0F; Arquitetura de 4 Camadas</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <div class="space-y-4">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-amber-500">
+                        <h4 class="font-bold text-amber-400 mb-1">Layer 1: Launchers (<code>dialogLaunchers.tsx</code>)</h4>
+                        <p class="dark:text-gray-300 text-sm">Funcoes async retornando Promises tipadas</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-amber-500">
+                        <h4 class="font-bold text-amber-400 mb-1">Layer 2: Helpers (<code>interactiveHelpers.tsx</code>)</h4>
+                        <p class="dark:text-gray-300 text-sm">Wrappers <code class="text-amber-400">showDialog</code> / <code class="text-amber-400">showSetupDialog</code></p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-amber-500">
+                        <h4 class="font-bold text-amber-400 mb-1">Layer 3: Design System</h4>
+                        <p class="dark:text-gray-300 text-sm">Primitivos: <code class="text-amber-400">Dialog</code>, <code class="text-amber-400">Pane</code>, <code class="text-amber-400">PermissionDialog</code></p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-amber-500">
+                        <h4 class="font-bold text-amber-400 mb-1">Layer 4: Feature Components</h4>
+                        <p class="dark:text-gray-300 text-sm">Requests de permissao tool-specific e paginas de wizard</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Design System Primitives -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-amber-500/30">2</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F3A8; Primitivos do Design System</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 text-center border border-amber-500/30">
+                        <div class="text-2xl mb-2">&#x1F5D4;&#xFE0F;</div>
+                        <h4 class="font-bold text-amber-400">Dialog</h4>
+                        <p class="dark:text-gray-400 text-xs">Chrome padrao para interacoes confirm/cancel</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 text-center border border-amber-500/30">
+                        <div class="text-2xl mb-2">&#x1F4CB;</div>
+                        <h4 class="font-bold text-amber-400">Pane</h4>
+                        <p class="dark:text-gray-400 text-xs">Regiao sem borda para telas de slash-command</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 text-center border border-amber-500/30">
+                        <div class="text-2xl mb-2">&#x1F512;</div>
+                        <h4 class="font-bold text-amber-400">PermissionDialog</h4>
+                        <p class="dark:text-gray-400 text-xs">Frame especializado para requests de permissao de tools</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Permission Requests -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-amber-500/30">3</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F6E1;&#xFE0F; Permission Requests</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4"><strong>BashPermissionRequest</strong> e o mais complexo, com integracao de classifier, regras de "allow prefix", avisos de comandos destrutivos e fallback para sandbox.</p>
+                <div class="dark:bg-dark-900 rounded-xl border border-amber-500/30 p-6 bg-gradient-to-r from-amber-500/5 to-transparent">
+                    <h4 class="font-bold text-amber-400 mb-2">&#x26A1; ClassifierCheckingSubtitle</h4>
+                    <p class="dark:text-gray-300 text-sm">Extraido porque um clock de shimmer a 20fps re-renderizaria a arvore inteira de 535 linhas a cada 50ms. A extracao isola o re-render apenas ao subtitle.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: CustomSelect -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-amber-500/30">4</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F39B;&#xFE0F; CustomSelect Widget</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4">Widget de input universal com duas variantes:</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border border-amber-500/30">
+                        <h4 class="font-bold text-amber-400 mb-1">TextOption</h4>
+                        <p class="dark:text-gray-300 text-sm">Opcao padrao com label e valor</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border border-amber-500/30">
+                        <h4 class="font-bold text-amber-400 mb-1">InputOption</h4>
+                        <p class="dark:text-gray-300 text-sm">Embute campo de texto ao vivo dentro da lista de selecao</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: Wizard Pattern -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-amber-500/30">5</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F9D9; Wizard Pattern</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <div class="space-y-3">
+                    <div class="flex items-center gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-amber-400 font-bold">WizardProvider</span> -- State container
+                    </div>
+                    <div class="flex items-center gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-amber-400 font-bold">useWizard</span> -- Hook para navegacao
+                    </div>
+                    <div class="flex items-center gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-amber-400 font-bold">WizardDialogLayout</span> -- Chrome per-step com titulo auto-computado
+                    </div>
+                    <div class="flex items-center gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-amber-400 font-bold">WizardNavigationFooter</span> -- Footer contextual
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 6: Architecture Diagram -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-amber-500/30">6</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F5FA;&#xFE0F; Arquitetura Completa</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <div class="overflow-x-auto">
+                    <pre class="mermaid">
+flowchart TD
+    A["main.tsx\nsetupScreens()"] -->|"await"| B["dialogLaunchers.tsx\nlaunchXxx(root, props)"]
+    B -->|"dynamic import"| C["Component Module\ne.g. SnapshotUpdateDialog"]
+    B -->|"calls"| D["interactiveHelpers.tsx\nshowSetupDialog()"]
+    D -->|"wraps in"| E["AppStateProvider\n+ KeybindingSetup"]
+    E -->|"root.render()"| F["Dialog / PermissionDialog / Pane\ndesign-system primitives"]
+    F --> G["Feature Component\ne.g. InvalidSettingsDialog,\nBashPermissionRequest"]
+    G --> H["CustomSelect\nor TextInput"]
+    H -->|"user selects"| I["done(result)\nresolves Promise"]
+    I -->|"returns typed value"| A
+                    </pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 7: Dialog Lifecycle -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-amber-500/30">7</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F504; Ciclo de Vida do Dialog</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <div class="overflow-x-auto">
+                    <pre class="mermaid">
+sequenceDiagram
+    participant M as main.tsx
+    participant DL as dialogLaunchers.tsx
+    participant IH as interactiveHelpers.tsx
+    participant R as Ink Root
+    participant C as Dialog Component
+    participant U as User
+    M->>DL: await launchXxxDialog(root, props)
+    DL->>DL: dynamic import(component)
+    DL->>IH: showSetupDialog(root, renderer)
+    IH->>R: root.render(AppStateProvider + KeybindingSetup)
+    R->>C: mount Dialog/PermissionDialog with keybindings
+    C->>U: display in terminal
+    U-->>C: keypress (Enter / Esc / arrow)
+    C->>C: useKeybinding fires
+    C->>IH: done(selectedValue)
+    IH->>DL: Promise resolves with typed value
+    DL->>M: returns typed result
+                    </pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary -->
+        <section class="mb-16">
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6">
+                <h3 class="text-xl font-bold text-amber-400 mb-4">&#x1F4CB; Resumo do Modulo</h3>
+                <div class="space-y-3">
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-amber-400 mt-0.5">&#x2705;</span>
+                        <span>Dialogos se tornam funcoes async retornando Promises tipadas</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-amber-400 mt-0.5">&#x2705;</span>
+                        <span><code class="text-amber-400">showSetupDialog</code> e o unico local onde AppStateProvider e KeybindingSetup sao adicionados</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-amber-400 mt-0.5">&#x2705;</span>
+                        <span><code class="text-amber-400">isCancelActive</code> resolve conflitos de text input</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-amber-400 mt-0.5">&#x2705;</span>
+                        <span>Permission requests usam roteamento por <code class="text-amber-400">switch</code> unico</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-amber-400 mt-0.5">&#x2705;</span>
+                        <span>Wizards gerenciam seu proprio ciclo de vida de saida</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Navigation -->
+        <div class="flex items-center justify-between">
+            <a href="modulo-4-2.html" class="flex items-center gap-2 dark:text-gray-400 hover:text-amber-400 transition-colors">
+                <span>&#x2190;</span> Modulo Anterior
+            </a>
+            <a href="modulo-4-4.html" class="flex items-center gap-2 text-amber-400 hover:text-amber-300 transition-colors font-medium">
+                Proximo Modulo <span>&#x2192;</span>
+            </a>
+        </div>
+
+    </main>
+
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.classList.contains('dark');
+            html.classList.toggle('dark', !isDark);
+            html.classList.toggle('light', isDark);
+            localStorage.setItem('theme', isDark ? 'light' : 'dark');
+        }
+        (function() {
+            const saved = localStorage.getItem('theme');
+            if (saved === 'light') {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+            }
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modulo 4.1 Ink Renderer - Claude Code Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true, theme:'dark'});</script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: { 400: '#fbbf24', 500: '#f59e0b', 600: '#d97706', 700: '#b45309', 800: '#92400e', 900: '#78350f' },
+                        dark: { 800: '#1e293b', 900: '#0f172a', 950: '#020617' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html.light { background: #f8fafc; color: #1e293b; }
+        html.light .dark\:bg-dark-950 { background: #f8fafc !important; }
+        html.light .dark\:bg-dark-900 { background: #ffffff !important; }
+        html.light .dark\:bg-dark-800 { background: #f1f5f9 !important; }
+        html.light .dark\:bg-dark-900\/50 { background: rgba(255,255,255,0.8) !important; }
+        html.light .dark\:bg-dark-800\/50 { background: rgba(241,245,249,0.8) !important; }
+        html.light .dark\:text-white { color: #1e293b !important; }
+        html.light .dark\:text-gray-100 { color: #334155 !important; }
+        html.light .dark\:text-gray-300 { color: #475569 !important; }
+        html.light .dark\:text-gray-400 { color: #64748b !important; }
+        html.light .dark\:text-gray-500 { color: #94a3b8 !important; }
+        html.light .dark\:border-gray-700 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-800 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-700\/50 { border-color: rgba(226,232,240,0.5) !important; }
+        html.light .text-amber-400 { color: #92400e !important; }
+        html.light .text-amber-500 { color: #b45309 !important; }
+        html.light .bg-amber-500\/10 { background: rgba(180,83,9,0.08) !important; }
+        html.light .bg-amber-500\/20 { background: rgba(180,83,9,0.12) !important; }
+        html.light .border-amber-500\/30 { border-color: rgba(180,83,9,0.2) !important; }
+        html.light .from-amber-900\/30 { --tw-gradient-from: rgba(180,83,9,0.08) !important; }
+        html.light nav { background: rgba(255,255,255,0.85) !important; border-bottom: 1px solid #e2e8f0 !important; }
+        html.light .dark\:hover\:bg-dark-800:hover { background: #e2e8f0 !important; }
+    </style>
+</head>
+<body class="dark:bg-dark-950 dark:text-white font-sans min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-40 backdrop-blur-xl dark:bg-dark-900/50 border-b dark:border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
+            <a href="../../index.html" class="text-yellow-400 font-bold text-lg whitespace-nowrap">&#x1F4BB; Claude Code Deep Dive</a>
+            <span class="dark:text-gray-600">|</span>
+            <a href="https://inema.club" target="_blank" class="text-sky-400 text-sm font-medium hover:underline">INEMA.CLUB</a>
+            <div class="flex items-center gap-1 ml-auto flex-wrap">
+                <a href="../trilha1/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Core Architecture</span><span class="md:hidden">T1</span></a>
+                <a href="../trilha2/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Tool System</span><span class="md:hidden">T2</span></a>
+                <a href="../trilha3/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Agent Intelligence</span><span class="md:hidden">T3</span></a>
+                <a href="../trilha4/" class="px-2 py-1 text-xs font-bold rounded bg-amber-500/20 text-amber-400 border border-amber-500/30"><span class="hidden md:inline">The Interface</span><span class="md:hidden">T4</span></a>
+                <a href="../trilha5/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Security</span><span class="md:hidden">T5</span></a>
+                <a href="../trilha6/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Performance</span><span class="md:hidden">T6</span></a>
+                <a href="../trilha7/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Testing</span><span class="md:hidden">T7</span></a>
+                <a href="../trilha8/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Advanced</span><span class="md:hidden">T8</span></a>
+                <button onclick="toggleTheme()" class="ml-2 p-2 rounded-lg dark:hover:bg-dark-800 dark:text-gray-400" title="Alternar tema">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <div class="max-w-5xl mx-auto px-4 pt-6 pb-2">
+        <nav class="flex items-center gap-2 text-sm dark:text-gray-400">
+            <a href="../../index.html" class="hover:text-amber-400 transition-colors">Inicio</a>
+            <span>/</span>
+            <a href="./" class="hover:text-amber-400 transition-colors">Trilha 4</a>
+            <span>/</span>
+            <span class="text-amber-400 font-medium">Modulo 4.1</span>
+        </nav>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-gradient-to-b from-amber-900/30 to-transparent py-12 px-4">
+        <div class="max-w-5xl mx-auto">
+            <span class="inline-block px-3 py-1 text-xs font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 rounded-full border border-amber-500/30 mb-4">MODULO 4.1</span>
+            <h1 class="text-3xl md:text-4xl font-extrabold mb-3">&#x1F5A5;&#xFE0F; Ink Renderer</h1>
+            <p class="text-lg dark:text-gray-300 max-w-3xl mb-6">O pipeline de renderizacao de 7 estagios do Ink que converte arvores de componentes React em saida de terminal com performance de microsegundos e zero pressao de garbage collection.</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-xl">
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-amber-400">7</div>
+                    <div class="text-xs dark:text-gray-400">Estagios</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-amber-400">~60</div>
+                    <div class="text-xs dark:text-gray-400">Minutos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-amber-400">Deep</div>
+                    <div class="text-xs dark:text-gray-400">Nivel</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-amber-400">Source</div>
+                    <div class="text-xs dark:text-gray-400">Tipo</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 pb-20">
+
+        <!-- Section 1 -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-amber-500/30">1</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F3AF; Stage 1 -- React Reconciler</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4">Um <code class="text-amber-400">react-reconciler</code> customizado conecta o React ao DOM proprio do Ink, em vez do browser. Quando <code class="text-amber-400">&lt;Text&gt;</code> esta aninhado dentro de outro <code class="text-amber-400">&lt;Text&gt;</code>, o no interno se torna <code class="text-amber-400">ink-virtual-text</code> -- um no fantasma sem backing do Yoga.</p>
+                <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-amber-500">
+                    <h4 class="font-bold text-amber-400 mb-1">Event Handlers</h4>
+                    <p class="dark:text-gray-300 text-sm">Event handlers sao armazenados separadamente em <code class="text-amber-400">node._eventHandlers</code>, prevenindo repinturas desnecessarias quando componentes pais re-renderizam com novas referencias de callback.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2 -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-amber-500/30">2</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F333; Stage 2 -- Virtual DOM</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4">Arvore de objetos TypeScript simples com nos <code class="text-amber-400">DOMElement</code>. O dirty flag sinaliza se re-renderizacao e necessaria -- nos inalterados sao copiados do frame anterior, entregando performance <strong>O(celulas alteradas)</strong>.</p>
+                <div class="dark:bg-dark-800 rounded-lg p-4 mb-4">
+                    <h4 class="font-bold text-amber-400 mb-2">Tipos de Nos</h4>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="px-2 py-1 text-xs rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">ink-root</span>
+                        <span class="px-2 py-1 text-xs rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">ink-box</span>
+                        <span class="px-2 py-1 text-xs rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">ink-text</span>
+                        <span class="px-2 py-1 text-xs rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">ink-virtual-text</span>
+                        <span class="px-2 py-1 text-xs rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">ink-raw-ansi</span>
+                        <span class="px-2 py-1 text-xs rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">ink-link</span>
+                        <span class="px-2 py-1 text-xs rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">ink-progress</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3 -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-amber-500/30">3</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F4D0; Stage 3 -- Yoga Layout</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4">Yoga e um engine de Flexbox em C++ compilado para WebAssembly. A interface <code class="text-amber-400">LayoutNode</code> desacopla o codebase dos bindings WebAssembly do Yoga.</p>
+                <div class="dark:bg-dark-900 rounded-xl border border-amber-500/30 p-6 bg-gradient-to-r from-amber-500/5 to-transparent">
+                    <h4 class="font-bold text-amber-400 mb-2">&#x26A0;&#xFE0F; Detalhe Critico</h4>
+                    <p class="dark:text-gray-300 text-sm">Como <code class="text-amber-400">ink-virtual-text</code>, <code class="text-amber-400">ink-link</code> e <code class="text-amber-400">ink-progress</code> nao possuem nos Yoga, DOM index != yoga index. Contagem manual de siblings precedentes com nos Yoga e necessaria.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4 -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-amber-500/30">4</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F3A8; Stage 4 -- renderNodeToOutput</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4">Caminhada recursiva pela arvore convertendo nos com layout em operacoes de Output. O <strong>Blit Fast Path</strong> verifica: se o no esta limpo, posicao inalterada e prevScreen disponivel, emite uma unica chamada <code class="text-amber-400">output.blit()</code>.</p>
+                <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-blue-500">
+                    <h4 class="font-bold text-blue-400 mb-1">&#x1F4CA; ScrollBox Hardware Scroll</h4>
+                    <p class="dark:text-gray-300 text-sm">Emite sequencia DECSTBM + SU/SD para frames de scroll em <strong>O(1)</strong>, aproveitando regioes de scroll do terminal em vez de repintar todo o conteudo.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5 -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-amber-500/30">5</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F4E6; Stages 5-6 -- Output Queue &amp; Screen Buffer</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4">O Stage 5 e uma abstracao de command-buffer coletando operacoes: write, blit, clear, clip/unclip, shift, noSelect. Replay em dois passes: Pass 1 expande a bounding box de dano, Pass 2 executa operacoes.</p>
+
+                <div class="dark:bg-dark-800 rounded-lg p-4 mb-4">
+                    <h4 class="font-bold text-amber-400 mb-2">Packed Int32Array -- Screen Buffer</h4>
+                    <p class="dark:text-gray-300 text-sm mb-3">2 words por celula (8 bytes total), eliminando alocacao per-cell de objetos:</p>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b dark:border-gray-700">
+                                    <th class="text-left py-2 px-3 text-amber-400 font-bold">Word</th>
+                                    <th class="text-left py-2 px-3 text-amber-400 font-bold">Conteudo</th>
+                                    <th class="text-left py-2 px-3 text-amber-400 font-bold">Bits</th>
+                                </tr>
+                            </thead>
+                            <tbody class="dark:text-gray-300">
+                                <tr class="border-b dark:border-gray-800">
+                                    <td class="py-2 px-3">word0</td>
+                                    <td class="py-2 px-3">charId</td>
+                                    <td class="py-2 px-3">32 bits</td>
+                                </tr>
+                                <tr class="border-b dark:border-gray-800">
+                                    <td class="py-2 px-3">word1</td>
+                                    <td class="py-2 px-3">styleId [31:17] + hyperlinkId [16:2] + width [1:0]</td>
+                                    <td class="py-2 px-3">32 bits</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="dark:bg-dark-900 rounded-xl border border-amber-500/30 p-6 bg-gradient-to-r from-amber-500/5 to-transparent">
+                    <h4 class="font-bold text-amber-400 mb-2">&#x1F4A1; Por que Int32Array?</h4>
+                    <p class="dark:text-gray-300 text-sm">Um terminal 200x120 alocaria 24.000 objetos por frame. Com Int32Array, zero pressao de GC. O StylePool faz intern, transition e cache. <code class="text-amber-400">transition(fromId, toId)</code> pre-computa strings de escape ANSI.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 6 -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-amber-500/30">6</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x26A1; Stage 7 -- Cell Diff &amp; Wide Characters</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4">O diff caminha apenas pela <strong>damage bounding box</strong>. Para cada celula alterada, emite sequencia ANSI minima.</p>
+
+                <div class="dark:bg-dark-800 rounded-lg p-4 mb-4">
+                    <h4 class="font-bold text-amber-400 mb-2">CellWidth Enum</h4>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div class="bg-amber-500/10 rounded-lg p-3 text-center border border-amber-500/30">
+                            <div class="text-amber-400 font-bold">Narrow</div>
+                            <div class="text-xs dark:text-gray-400">1 coluna</div>
+                        </div>
+                        <div class="bg-amber-500/10 rounded-lg p-3 text-center border border-amber-500/30">
+                            <div class="text-amber-400 font-bold">Wide</div>
+                            <div class="text-xs dark:text-gray-400">2 colunas</div>
+                        </div>
+                        <div class="bg-amber-500/10 rounded-lg p-3 text-center border border-amber-500/30">
+                            <div class="text-amber-400 font-bold">SpacerTail</div>
+                            <div class="text-xs dark:text-gray-400">Segunda metade</div>
+                        </div>
+                        <div class="bg-amber-500/10 rounded-lg p-3 text-center border border-amber-500/30">
+                            <div class="text-amber-400 font-bold">SpacerHead</div>
+                            <div class="text-xs dark:text-gray-400">Primeira metade</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 7: Pipeline Diagram -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-amber-500/30">7</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F5FA;&#xFE0F; Pipeline Completo de Renderizacao</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <div class="overflow-x-auto">
+                    <pre class="mermaid">
+flowchart LR
+    A["Stage 1\nReact Reconciler\nreconciler.ts"] --> B["Stage 2\nVirtual DOM\ndom.ts"]
+    B --> C["Stage 3\nYoga Layout\nlayout/"]
+    C --> D["Stage 4\nrenderNodeToOutput\nrender-node-to-output.ts"]
+    D --> E["Stage 5\nOutput Queue\noutput.ts"]
+    E --> F["Stage 6\nScreen Buffer\nscreen.ts\nPacked Int32Array"]
+    F --> G["Stage 7\nCell Diff\nMinimal ANSI"]
+                    </pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary -->
+        <section class="mb-16">
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6">
+                <h3 class="text-xl font-bold text-amber-400 mb-4">&#x1F4CB; Resumo do Modulo</h3>
+                <div class="space-y-3">
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-amber-400 mt-0.5">&#x2705;</span>
+                        <span>O dirty flag e a otimizacao central -- frames em steady-state tocam apenas O(celulas alteradas)</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-amber-400 mt-0.5">&#x2705;</span>
+                        <span>Yoga e um engine Flexbox em WebAssembly -- mesmo algoritmo de layout do React Native</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-amber-400 mt-0.5">&#x2705;</span>
+                        <span>O screen buffer usa typed array (2 Int32s por celula), nao objetos -- elimina pressao de GC</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-amber-400 mt-0.5">&#x2705;</span>
+                        <span>A classe Output e um command buffer com design de dois passes para interacao correta de clip/damage</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-amber-400 mt-0.5">&#x2705;</span>
+                        <span>Alt-screen mode tem tres invariantes interligados: altura limitada, viewport falso, cursor limitado</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-amber-400 mt-0.5">&#x2705;</span>
+                        <span>O reconciler evita marcar dirty para event handlers</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-amber-400 mt-0.5">&#x2705;</span>
+                        <span>O charCache no Output e o acelerador de hot path do tokenizer -- maioria das linhas nao muda entre frames</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Navigation -->
+        <div class="flex items-center justify-between">
+            <a href="./" class="flex items-center gap-2 dark:text-gray-400 hover:text-amber-400 transition-colors">
+                <span>&#x2190;</span> Voltar para Trilha
+            </a>
+            <a href="modulo-4-2.html" class="flex items-center gap-2 text-amber-400 hover:text-amber-300 transition-colors font-medium">
+                Proximo Modulo <span>&#x2192;</span>
+            </a>
+        </div>
+
+    </main>
+
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.classList.contains('dark');
+            html.classList.toggle('dark', !isDark);
+            html.classList.toggle('light', isDark);
+            localStorage.setItem('theme', isDark ? 'light' : 'dark');
+        }
+        (function() {
+            const saved = localStorage.getItem('theme');
+            if (saved === 'light') {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+            }
+        })();
+    </script>
+</body>
+</html>
