@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T1 Core Architecture - Claude Code Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: { 400: '#34d399', 500: '#10b981', 600: '#059669', 700: '#047857', 800: '#065f46', 900: '#064e3b' },
+                        dark: { 800: '#1e293b', 900: '#0f172a', 950: '#020617' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html.light { background: #f8fafc; color: #1e293b; }
+        html.light .dark\:bg-dark-950 { background: #f8fafc !important; }
+        html.light .dark\:bg-dark-900 { background: #ffffff !important; }
+        html.light .dark\:bg-dark-800 { background: #f1f5f9 !important; }
+        html.light .dark\:bg-dark-900\/50 { background: rgba(255,255,255,0.8) !important; }
+        html.light .dark\:bg-dark-800\/50 { background: rgba(241,245,249,0.8) !important; }
+        html.light .dark\:text-white { color: #1e293b !important; }
+        html.light .dark\:text-gray-100 { color: #334155 !important; }
+        html.light .dark\:text-gray-300 { color: #475569 !important; }
+        html.light .dark\:text-gray-400 { color: #64748b !important; }
+        html.light .dark\:text-gray-500 { color: #94a3b8 !important; }
+        html.light .dark\:border-gray-700 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-800 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-700\/50 { border-color: rgba(226,232,240,0.5) !important; }
+        html.light .text-emerald-400 { color: #059669 !important; }
+        html.light .text-emerald-500 { color: #047857 !important; }
+        html.light .bg-emerald-500\/10 { background: rgba(5,150,105,0.08) !important; }
+        html.light .bg-emerald-500\/20 { background: rgba(5,150,105,0.12) !important; }
+        html.light .border-emerald-500\/30 { border-color: rgba(5,150,105,0.2) !important; }
+        html.light .from-emerald-900\/30 { --tw-gradient-from: rgba(5,150,105,0.08) !important; }
+        html.light .dark\:bg-gradient-to-b { background: #f8fafc !important; }
+        html.light nav { background: rgba(255,255,255,0.85) !important; border-bottom: 1px solid #e2e8f0 !important; }
+        html.light .dark\:hover\:bg-dark-800:hover { background: #e2e8f0 !important; }
+    </style>
+</head>
+<body class="dark:bg-dark-950 dark:text-white font-sans min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-40 backdrop-blur-xl dark:bg-dark-900/50 border-b dark:border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
+            <a href="../../index.html" class="text-yellow-400 font-bold text-lg whitespace-nowrap">&#x1F4BB; Claude Code Deep Dive</a>
+            <span class="dark:text-gray-600">|</span>
+            <a href="https://inema.club" target="_blank" class="text-sky-400 text-sm font-medium hover:underline">INEMA.CLUB</a>
+            <div class="flex items-center gap-1 ml-auto flex-wrap">
+                <a href="../trilha1/" class="px-2 py-1 text-xs font-bold rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"><span class="hidden md:inline">Core Architecture</span><span class="md:hidden">T1</span></a>
+                <a href="../trilha2/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Tool System</span><span class="md:hidden">T2</span></a>
+                <a href="../trilha3/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Agent Intelligence</span><span class="md:hidden">T3</span></a>
+                <a href="../trilha4/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Interface</span><span class="md:hidden">T4</span></a>
+                <a href="#" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Security</span><span class="md:hidden">T5</span></a>
+                <a href="#" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Performance</span><span class="md:hidden">T6</span></a>
+                <a href="#" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Testing</span><span class="md:hidden">T7</span></a>
+                <a href="#" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Advanced</span><span class="md:hidden">T8</span></a>
+                <button onclick="toggleTheme()" class="ml-2 p-2 rounded-lg dark:hover:bg-dark-800 dark:text-gray-400" title="Alternar tema">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Header -->
+    <header class="bg-gradient-to-b from-emerald-900/30 to-transparent py-16 px-4">
+        <div class="max-w-5xl mx-auto text-center">
+            <span class="inline-block px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 rounded-full border border-emerald-500/30 mb-4">TRILHA 1</span>
+            <h1 class="text-4xl md:text-5xl font-extrabold mb-4">&#x1F9E9; Core Architecture</h1>
+            <p class="text-lg dark:text-gray-300 max-w-2xl mx-auto mb-8">Domine o pipeline de inicializacao, o motor de queries, gerenciamento de estado, o system prompt e a visao completa da arquitetura do Claude Code.</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-xl mx-auto">
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-emerald-400">5</div>
+                    <div class="text-xs dark:text-gray-400">Modulos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-emerald-400">35+</div>
+                    <div class="text-xs dark:text-gray-400">Topicos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-emerald-400">~8h</div>
+                    <div class="text-xs dark:text-gray-400">Duracao</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-emerald-400">Deep</div>
+                    <div class="text-xs dark:text-gray-400">Nivel</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 pb-20">
+
+        <!-- Quick Nav -->
+        <section class="mb-16">
+            <h2 class="text-xl font-bold mb-6 dark:text-gray-100">Navegacao Rapida</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <a href="#mod-1-1" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-emerald-500/50 transition-colors block">
+                    <span class="text-emerald-400 font-mono text-sm">1.1</span> &#x1F680; Boot Sequence
+                </a>
+                <a href="#mod-1-2" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-emerald-500/50 transition-colors block">
+                    <span class="text-emerald-400 font-mono text-sm">1.2</span> &#x2699;&#xFE0F; Query Engine & LLM API
+                </a>
+                <a href="#mod-1-3" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-emerald-500/50 transition-colors block">
+                    <span class="text-emerald-400 font-mono text-sm">1.3</span> &#x1F4E6; State Management
+                </a>
+                <a href="#mod-1-4" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-emerald-500/50 transition-colors block">
+                    <span class="text-emerald-400 font-mono text-sm">1.4</span> &#x1F4DC; System Prompt Construction
+                </a>
+                <a href="#mod-1-5" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-emerald-500/50 transition-colors block">
+                    <span class="text-emerald-400 font-mono text-sm">1.5</span> &#x1F3D7;&#xFE0F; Architecture Overview
+                </a>
+            </div>
+        </section>
+
+        <!-- Module 1.1 -->
+        <section id="mod-1-1" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-emerald-400 font-mono text-sm font-bold">1.1</span>
+                        <span class="text-xs dark:text-gray-500">~90 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">Boot Sequence</h3>
+                    <p class="dark:text-gray-400 text-sm">O pipeline de inicializacao multi-fase que executa quando o usuario digita <code>claude</code> no terminal.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <!-- Topic 1 -->
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F680; Three-Layer Boot Architecture</div>
+                                <div class="text-xs dark:text-gray-500">CLI Entrypoint, Main Function, Setup + REPL</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> A arquitetura de boot em tres camadas: Layer 1 (cli.tsx) com fast paths e despacho de argumentos, Layer 2 (main.tsx) com parsing Commander, migracoes e validacao de permissoes, e Layer 3 (setup.ts + replLauncher.tsx) com wiring de sessao e renderizacao React/Ink.</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> Entender a sequencia de boot e essencial para diagnosticar problemas de inicializacao, otimizar tempo de startup e compreender como o Claude Code prepara o ambiente completo antes da primeira interacao.</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> Zero-cost fast paths, Commander parsing, session wiring, React-based terminal UI, parallelization of MDM/keychain reads durante module evaluation.</div>
+                        </div>
+                    </div>
+                    <!-- Topic 2 -->
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x26A1; Key Startup Optimizations</div>
+                                <div class="text-xs dark:text-gray-500">Parallelization e latencia critica</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> MDM policy reads e keychain reads levam 20-65ms e sao lancados durante module evaluation para executar concorrentemente com a cadeia de imports, prevenindo leituras sequenciais de adicionar latencia ao caminho critico.</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> Compreender otimizacoes de startup permite replicar padroes de paralelizacao em suas proprias aplicacoes CLI e entender trade-offs de performance.</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> Concurrent subprocess investment, startMdmRawRead(), startKeychainPrefetch(), preconnectAnthropicApi(), startDeferredPrefetches().</div>
+                        </div>
+                    </div>
+                    <!-- Topic 3 -->
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F527; Setup Phase Sequence</div>
+                                <div class="text-xs dark:text-gray-500">Ordering critico e analytics</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> A sequencia de setup impoe ordem critica: setCwd() executa antes de captureHooksConfigSnapshot() para garantir hooks de projeto corretos. O beacon tengu_started dispara imediatamente apos o sink de analytics conectar.</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> Ordering de inicializacao e uma classe comum de bugs. Entender por que certas operacoes devem preceder outras previne condicoes de corrida sutis.</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> setCwd() antes de captureHooksConfigSnapshot(), tengu_started beacon, health monitoring signals, deterministic setup ordering.</div>
+                        </div>
+                    </div>
+                    <!-- Topic 4 -->
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F3CE;&#xFE0F; Bare Mode Optimization</div>
+                                <div class="text-xs dark:text-gray-500">Flag --bare para cenarios scripted/SDK</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> O flag --bare remove UDS messaging, teammate snapshots, inicializacao de memoria de sessao, plugin hooks e todos os deferred prefetches para cenarios scripted/SDK onde sensibilidade a latencia e maxima.</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> Bare mode e o fast path para integracao CI/CD e SDK. Saber o que e removido ajuda a debugar comportamentos ausentes em modo headless.</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> isBareMode() flag, stripped features list, latency-sensitive paths, --print mode, React never imported.</div>
+                        </div>
+                    </div>
+                    <!-- Topic 5 -->
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F30D; Global State Management</div>
+                                <div class="text-xs dark:text-gray-500">bootstrap/state.ts e latch fields</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> bootstrap/state.ts mantem estado com escopo de sessao incluindo identidade, rastreamento de uso, flags de modo e telemetria. "Latch fields" como afkModeHeaderLatched manteem headers de API estaveis para prevenir cache busts de prompt.</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> Entender o estado global vs estado React e fundamental para a arquitetura de duas camadas do Claude Code.</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> Session-scoped state, latch fields, prompt cache stability, identity tracking, telemetry, two-layer state model.</div>
+                        </div>
+                    </div>
+                    <!-- Topic 6 -->
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x23F1;&#xFE0F; First Keystroke to First Token</div>
+                                <div class="text-xs dark:text-gray-500">Timeline completo de cold start</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> O timeline de t=0ms (CLI entry) ate t+50ms (first token): MDM/keychain reads em t=1ms, module eval em t=136ms, TCP warm-up em t=160ms, primeiro render em t=190ms, deferred prefetches em t=191ms.</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> Mapear a timeline de startup ajuda a identificar gargalos e otimizar o tempo percebido pelo usuario.</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> Cold start timeline, parallel work categories, TCP warm-up, deferred prefetches, time-to-first-render.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-1-1')" class="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-sm font-medium hover:bg-emerald-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-1-1.html" class="px-4 py-2 text-emerald-400 border border-emerald-500/30 rounded-lg text-sm font-medium hover:bg-emerald-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Module 1.2 -->
+        <section id="mod-1-2" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-emerald-400 font-mono text-sm font-bold">1.2</span>
+                        <span class="text-xs dark:text-gray-500">~120 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">Query Engine & LLM API</h3>
+                    <p class="dark:text-gray-400 text-sm">As quatro camadas entre a mensagem do usuario e a resposta no terminal: QueryEngine, queryLoop, callModel e stop hooks.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4E8; QueryEngine.submitMessage()</div>
+                                <div class="text-xs dark:text-gray-500">Uma engine por conversa, estado mutavel</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> QueryEngine e uma classe stateful instanciada uma vez por conversa. Mantem historico de mensagens, uso de tokens, denials de permissao e abort controller. Cada submitMessage() e um "turn".</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> E o ponto central de todo o fluxo de dados. SDK, REPL e remote Claude Code todos passam pelo mesmo query().</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> Stateful class, mutableMessages, AbortController, transcript written before API call (crash resilience), async generator pattern.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F504; queryLoop() - The While(true) Core</div>
+                                <div class="text-xs dark:text-gray-500">Sete razoes para continuar o loop</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> queryLoop() e um while(true) carregando um State tipado entre iteracoes. O campo transition.reason registra por que o loop continuou: max_output_tokens, reactive_compact, stop_hook_blocking, token_budget_continuation, etc.</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> Entender as 7 transition reasons e as condicoes de terminacao e crucial para debugar comportamentos inesperados do modelo.</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> Continue transitions (7 reasons), Terminal conditions (7 reasons), State object, turnCount, autoCompactTracking.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F310; Streaming & API Layer</div>
+                                <div class="text-xs dark:text-gray-500">SSE stream reconstruction e StreamingToolExecutor</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> queryModel chama a API Anthropic via streaming e reconstrui AssistantMessages a partir de SSE events. StreamingToolExecutor inicia ferramentas enquanto o stream ainda esta aberto, reduzindo latencia.</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> Compreender o streaming pipeline e essencial para entender latencia, tombstone messages e fallback behavior.</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> SSE events (message_start, content_block_delta, message_delta), tombstone messages, StreamingToolExecutor, backfillObservableInput.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F6E1;&#xFE0F; withRetry() - Smart Exponential Backoff</div>
+                                <div class="text-xs dark:text-gray-500">529s, OAuth refresh, persistent mode</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> Cada API call passa por withRetry() com ate 10 retries. Decisoes incluem: 529 foreground-only retry, Opus fallback apos 3 erros consecutivos, OAuth 401 refresh, context overflow recalculation, persistent mode com 30-min cap.</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> O retry layer e uma state machine sofisticada que vai muito alem de exponential backoff simples.</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> FallbackTriggeredError, foreground vs background source routing, ECONNRESET/EPIPE handling, UNATTENDED_RETRY mode, jitter.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4BE; Context Management & Autocompact</div>
+                                <div class="text-xs dark:text-gray-500">Pipeline de reducao de contexto em 5 estagios</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> Antes de cada API call, 5 estrategias executam em ordem fixa: applyToolResultBudget, snipCompact, microcompact, contextCollapse, e autoCompact. Cada uma reduz contexto progressivamente.</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> Gerenciamento de contexto automatico e o que permite conversas longas sem perda de informacao critica.</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> Tool result budget, HISTORY_SNIP, cached microcompact, CONTEXT_COLLAPSE, reactive compact, task_budget carry-over across compaction boundaries.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F514; Stop Hooks & Token Budget</div>
+                                <div class="text-xs dark:text-gray-500">Post-turn lifecycle e auto-continue</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> Apos o modelo terminar, handleStopHooks() executa scripts configurados. Token budget implementa auto-continue para o SDK path com thresholds de 90% e deteccao de diminishing returns.</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> Stop hooks e token budget controlam quando o modelo para e quando continua automaticamente.</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> Blocking errors, prevent continuation, fire-and-forget side effects (memory extraction, prompt suggestions, auto-dream), COMPLETION_THRESHOLD 90%, DIMINISHING_THRESHOLD 500.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-1-2')" class="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-sm font-medium hover:bg-emerald-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-1-2.html" class="px-4 py-2 text-emerald-400 border border-emerald-500/30 rounded-lg text-sm font-medium hover:bg-emerald-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Module 1.3 -->
+        <section id="mod-1-3" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-emerald-400 font-mono text-sm font-bold">1.3</span>
+                        <span class="text-xs dark:text-gray-500">~100 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">State Management</h3>
+                    <p class="dark:text-gray-400 text-sm">Store de 35 linhas em TypeScript, AppState com 400+ campos, integracao React via useSyncExternalStore e o padrao onChangeAppState.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F3D7;&#xFE0F; createStore Pattern</div>
+                                <div class="text-xs dark:text-gray-500">35 linhas, zero dependencias</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> Um store com tres operacoes (getState, setState, subscribe) que mapeia exatamente para useSyncExternalStore. setState recebe updater function, Object.is bail-out previne re-renders desnecessarios.</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> Demonstra que state management sofisticado pode ser implementado sem Redux/Zustand quando a interface requerida e bem definida.</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> Updater function pattern, Object.is equality, Set of listeners, onChange callback, framework-agnostic design.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4CA; AppState Shape - 90+ Fields</div>
+                                <div class="text-xs dark:text-gray-500">DeepImmutable e seis categorias logicas</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> AppState com 90+ campos em 6 categorias: Session Core, UI State, Permissions, Agent & Tasks, Remote & Bridge, Subsystem State. Usa DeepImmutable com escape hatch para tipos com funcoes.</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> AppState e a single source of truth para toda a sessao. Entender sua estrutura e essencial para qualquer modificacao no Claude Code.</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> DeepImmutable, escape hatch via intersection type, SpeculationState (campo mais complexo), mutable refs para performance.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F50D; onChangeAppState - Side-Effect Chokepoint</div>
+                                <div class="text-xs dark:text-gray-500">Centralizacao de efeitos colaterais</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> Funcao unica que dispara em toda transicao de estado, fazendo diff de campos relevantes para acionar efeitos: sync de permission mode para CCR, persistencia de modelo, salvamento de globalConfig.</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> Antes deste padrao, apenas 2 de 8+ caminhos de mutacao sincronizavam corretamente. Centralizar o diff resolve isso automaticamente.</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> Diff-based side effects, externalization guard (toExternalPermissionMode), externalMetadataToAppState inverse, 6 diff blocks.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x2699;&#xFE0F; React Hooks Layer</div>
+                                <div class="text-xs dark:text-gray-500">useAppState, useSetAppState, selector rules</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> Tres hooks: useAppState (read slice com re-render seletivo), useSetAppState (write sem subscribe), useAppStateStore (raw store). Regra critica: nunca retornar novos objetos do selector.</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> Selector incorreto causa infinite re-render loops. Entender Object.is comparison e essencial.</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> useSyncExternalStore, selector identity stability, lazy useState initializer, React Compiler memo cache.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4C1; Selectors & Transition Helpers</div>
+                                <div class="text-xs dark:text-gray-500">Pure derivations e teammateViewHelpers</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> Selectors aceitam Pick&lt;AppState, ...&gt; para testabilidade. Transition helpers como enterTeammateView recebem setAppState como argumento, mantendo-se framework-agnosticos.</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> O padrao de Pick para selectors e setAppState como argumento para helpers sao patterns reutilizaveis em qualquer aplicacao.</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> Pick type for testability, retain/evict lifecycle (30s PANEL_GRACE_MS), circular dependency avoidance, ActiveAgentForInput discriminated union.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F500; Full Data Flow</div>
+                                <div class="text-xs dark:text-gray-500">Do componente ao terminal</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> Fluxo completo: Component chama useSetAppState -> store.setState(updater) -> Object.is check -> onChangeAppState diffs -> listeners notificados -> useSyncExternalStore triggers re-render seletivo.</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> Visualizar o fluxo completo conecta todas as pecas e revela por que cada decisao de design foi tomada.</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> End-to-end data flow, Context vs State separation, modalContext/overlayContext as true React Context, fpsMetrics external store pattern.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-1-3')" class="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-sm font-medium hover:bg-emerald-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-1-3.html" class="px-4 py-2 text-emerald-400 border border-emerald-500/30 rounded-lg text-sm font-medium hover:bg-emerald-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Module 1.4 -->
+        <section id="mod-1-4" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-emerald-400 font-mono text-sm font-bold">1.4</span>
+                        <span class="text-xs dark:text-gray-500">~100 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">System Prompt Construction</h3>
+                    <p class="dark:text-gray-400 text-sm">Como o Claude Code monta um system prompt de milhares de tokens a partir de secoes composiveis, cache boundaries e CLAUDE.md files.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F3AF; Priority Resolver</div>
+                                <div class="text-xs dark:text-gray-500">Waterfall: override > coordinator > agent > custom > default</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> buildEffectiveSystemPrompt() implementa um waterfall estrito de prioridades. overrideSystemPrompt ignora tudo. appendSystemPrompt sempre anexa exceto com override.</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> Saber qual prompt esta ativo em cada modo (coordinator, agent, custom) e fundamental para debugging.</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> Priority waterfall, appendSystemPrompt always appends, proactive/KAIROS mode appends agent instructions to default prompt.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F3ED; Content Factory - getSystemPrompt()</div>
+                                <div class="text-xs dark:text-gray-500">Secoes estaticas + dinamicas com boundary marker</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> getSystemPrompt() monta duas metades separadas por SYSTEM_PROMPT_DYNAMIC_BOUNDARY. Prefix estatico (globalmente cacheavel) e tail dinamico (por sessao).</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> Entender a boundary e essencial para otimizar custo de tokens e cache hit rates.</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> Static prefix (7 sections), dynamic tail (10 sections), CLAUDE_CODE_SIMPLE stub, Promise.all for parallel fetching.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4CB; Dynamic Sections Registry</div>
+                                <div class="text-xs dark:text-gray-500">Memoized vs volatile, MCP instructions</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> Secoes dinamicas sao gerenciadas por um registry nomeado. A maioria e memoized; apenas mcp_instructions e volatile porque servidores MCP podem conectar/desconectar entre turns.</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> O design memoized vs volatile impacta diretamente cache hit rate e custo de tokens.</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> systemPromptSection (memoized), DANGEROUS_uncachedSystemPromptSection (volatile), 10 registered sections, cache keyed by name string.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4C2; CLAUDE.md Injection</div>
+                                <div class="text-xs dark:text-gray-500">4 scopes, @include directive, frontmatter filtering</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> CLAUDE.md files carregados em 4 scopes: managed (/etc), user (~/.claude), project (CLAUDE.md), local (CLAUDE.local.md). Suporta @include directive e frontmatter com paths filtering.</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> CLAUDE.md e o mecanismo primario de customizacao de comportamento. Entender prioridade e composicao e essencial.</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> Four-scope hierarchy, files closer to CWD = higher priority, @include circular reference prevention, YAML frontmatter paths filtering, MEMORY.md 200 lines/25KB limit.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F30D; Environment Info & MCP Instructions</div>
+                                <div class="text-xs dark:text-gray-500">computeSimpleEnvInfo(), undercover mode</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> env_info_simple injeta CWD, git status, platform, shell, OS version, model name e knowledge cutoff. MCP instructions injeta blocos de texto de servidores conectados.</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> O contexto ambiental permite que o modelo raciocine sobre o ambiente de execucao. Undercover mode previne vazamento de IDs de modelo interno.</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> Shell detection, Windows path note, knowledge cutoff per model, mcpInstructionsDelta experimental path, undercover mode for internal builds.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F916; Subagent Enhancement & Escape Hatches</div>
+                                <div class="text-xs dark:text-gray-500">DEFAULT_AGENT_PROMPT, CLAUDE_CODE_SIMPLE, proactive mode</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> Subagents nao usam getSystemPrompt(); partem de DEFAULT_AGENT_PROMPT com enhancement de env details. Escape hatches: CLAUDE_CODE_SIMPLE (3 linhas), proactive mode (identidade autonoma).</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> Subagents sao o mecanismo core de multi-agent. Saber como seu prompt difere e crucial.</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> enhanceSystemPromptWithEnvDetails(), computeEnvInfo() (fuller version), XML env tags, proactive autonomous-agent identity prompt.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-1-4')" class="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-sm font-medium hover:bg-emerald-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-1-4.html" class="px-4 py-2 text-emerald-400 border border-emerald-500/30 rounded-lg text-sm font-medium hover:bg-emerald-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Module 1.5 -->
+        <section id="mod-1-5" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-emerald-400 font-mono text-sm font-bold">1.5</span>
+                        <span class="text-xs dark:text-gray-500">~90 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">Architecture Overview</h3>
+                    <p class="dark:text-gray-400 text-sm">Sintese das 49 licoes anteriores em um modelo mental completo: 6 camadas, data flow, design patterns e invariantes criticos.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F3D7;&#xFE0F; Six-Layer Architecture</div>
+                                <div class="text-xs dark:text-gray-500">Boot, UI Shell, State, Query Engine, Tools, Services</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> As 6 camadas: Boot (main.tsx, setup.ts), UI Shell (replLauncher.tsx, REPL.tsx), State (AppStateStore.ts), Query Engine (QueryEngine.ts, query.ts), Tools (tools.ts, Tool.ts), Services (API, MCP, compaction).</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> O mapa mental de 6 camadas e o framework para localizar qualquer funcionalidade no codebase.</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> Layer isolation, TypeScript/Bun/React-Ink stack, Anthropic API integration, capability registry pattern.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F500; Data Flow: Prompt to Response</div>
+                                <div class="text-xs dark:text-gray-500">Sequencia completa de input a output</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> User enters prompt -> processUserInput() -> system prompt assembled -> transcript written to disk BEFORE API call -> query loop streams -> tools execute with permissions -> response flows through UI -> session stored as JSONL.</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> O fluxo end-to-end conecta todas as camadas e revela decisoes criticas como transcript-before-API.</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> Transcript-first reliability, JSONL session storage, async generator streaming, crash-resilient design.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F6E1;&#xFE0F; Permission Architecture</div>
+                                <div class="text-xs dark:text-gray-500">canUseTool() choke point, 3 modos</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> canUseTool() e o unico choke point para decisoes de permissao. Tres modos: default (perguntar usuario), auto (permitir safe tools), bypass (permitir tudo).</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> Seguranca e central ao Claude Code. Entender como permissoes sao gated e essencial para customizacao segura.</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> Single architectural choke point, default/auto/bypass modes, always-allow/always-deny rules, hook system integration.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F504; Session Management & MCP</div>
+                                <div class="text-xs dark:text-gray-500">JSONL storage, MCPServerConnection lifecycle</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> Sessoes armazenadas como JSONL em ~/.claude/projects/. MCP servers inicializados antes da primeira query, passados em ToolUseContext, tools/commands/resources adicionados dinamicamente.</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> Session management e MCP sao a infraestrutura de persistencia e extensibilidade do Claude Code.</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> JSONL format, fire-and-forget writes with 100ms lazy flush, loadTranscriptFromFile(), MCPServerConnection state machine.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F9EC; Agent Swarms & Hook System</div>
+                                <div class="text-xs dark:text-gray-500">Recursive execution e lifecycle hooks</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> AgentTool permite execucao recursiva com QueryEngine proprio. Em swarm mode, agentes comunicam via UDS. Hooks configurados em settings.json: PreToolUse, PostToolUse, Stop, etc.</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> Swarms e hooks sao os mecanismos de extensibilidade mais poderosos do Claude Code.</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> Recursive QueryEngine spawning, UDS messaging, 8 hook types, captureHooksConfigSnapshot() security invariant.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-emerald-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F48E; Key Design Patterns & Invariants</div>
+                                <div class="text-xs dark:text-gray-500">6 patterns criticos, invariantes de seguranca</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-emerald-400">O que e:</strong> 6 patterns: async generator threading, dead code elimination via feature(), cache-warming, immutable AppState + mutable bootstrap/state, isBareMode() fast path, parallel subprocess investment.</div>
+                            <div><strong class="text-emerald-400">Por que aprender:</strong> Estes patterns sao a essencia do design do Claude Code e sao aplicaveis a qualquer aplicacao TypeScript de grande escala.</div>
+                            <div><strong class="text-emerald-400">Conceitos-chave:</strong> Generators all the way down, feature() dead code elimination, transcript-first reliability, hooks captured after setCwd(), tool list stable per build.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-1-5')" class="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-sm font-medium hover:bg-emerald-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-1-5.html" class="px-4 py-2 text-emerald-400 border border-emerald-500/30 rounded-lg text-sm font-medium hover:bg-emerald-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modals -->
+    <div id="modal-1-1" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-1-1')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-1-1')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-1-1.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+    <div id="modal-1-2" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-1-2')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-1-2')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-1-2.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+    <div id="modal-1-3" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-1-3')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-1-3')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-1-3.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+    <div id="modal-1-4" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-1-4')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-1-4')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-1-4.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+    <div id="modal-1-5" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-1-5')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-1-5')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-1-5.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+
+    <script>
+        function toggleTopic(el) {
+            const content = el.querySelector('.topic-content');
+            const section = el.closest('.divide-y');
+            if (!content) return;
+            const wasHidden = content.classList.contains('hidden');
+            section.querySelectorAll('.topic-content').forEach(c => c.classList.add('hidden'));
+            if (wasHidden) content.classList.remove('hidden');
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.classList.contains('dark');
+            html.classList.toggle('dark', !isDark);
+            html.classList.toggle('light', isDark);
+            localStorage.setItem('theme', isDark ? 'light' : 'dark');
+        }
+
+        (function() {
+            const saved = localStorage.getItem('theme');
+            if (saved === 'light') {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+            }
+        })();
+    </script>
+</body>
+</html>
