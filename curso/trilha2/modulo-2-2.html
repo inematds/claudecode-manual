@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2.2 The Bash Tool - Claude Code Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: { 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a' },
+                        dark: { 800: '#1e293b', 900: '#0f172a', 950: '#020617' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html.light { background: #f8fafc; color: #1e293b; }
+        html.light .dark\:bg-dark-950 { background: #f8fafc !important; }
+        html.light .dark\:bg-dark-900 { background: #ffffff !important; }
+        html.light .dark\:bg-dark-800 { background: #f1f5f9 !important; }
+        html.light .dark\:bg-dark-900\/50 { background: rgba(255,255,255,0.8) !important; }
+        html.light .dark\:bg-dark-800\/50 { background: rgba(241,245,249,0.8) !important; }
+        html.light .dark\:text-white { color: #1e293b !important; }
+        html.light .dark\:text-gray-100 { color: #334155 !important; }
+        html.light .dark\:text-gray-300 { color: #475569 !important; }
+        html.light .dark\:text-gray-400 { color: #64748b !important; }
+        html.light .dark\:text-gray-500 { color: #94a3b8 !important; }
+        html.light .dark\:border-gray-700 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-800 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-700\/50 { border-color: rgba(226,232,240,0.5) !important; }
+        html.light .text-blue-400 { color: #2563eb !important; }
+        html.light .text-blue-500 { color: #1d4ed8 !important; }
+        html.light .bg-blue-500\/10 { background: rgba(37,99,235,0.08) !important; }
+        html.light .bg-blue-500\/20 { background: rgba(37,99,235,0.12) !important; }
+        html.light .border-blue-500\/30 { border-color: rgba(37,99,235,0.2) !important; }
+        html.light .from-blue-900\/30 { --tw-gradient-from: rgba(37,99,235,0.08) !important; }
+        html.light nav { background: rgba(255,255,255,0.85) !important; border-bottom: 1px solid #e2e8f0 !important; }
+        html.light .dark\:hover\:bg-dark-800:hover { background: #e2e8f0 !important; }
+        html.light pre { background: #f1f5f9 !important; border-color: #e2e8f0 !important; }
+        html.light code { color: #1e293b !important; }
+    </style>
+</head>
+<body class="dark:bg-dark-950 dark:text-white font-sans min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-40 backdrop-blur-xl dark:bg-dark-900/50 border-b dark:border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
+            <a href="../../index.html" class="text-yellow-400 font-bold text-lg whitespace-nowrap">&#x1F4BB; Claude Code Deep Dive</a>
+            <span class="dark:text-gray-600">|</span>
+            <a href="https://inema.club" target="_blank" class="text-sky-400 text-sm font-medium hover:underline">INEMA.CLUB</a>
+            <div class="flex items-center gap-1 ml-auto flex-wrap">
+                <a href="../trilha1/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Core Architecture</span><span class="md:hidden">T1</span></a>
+                <a href="../trilha2/" class="px-2 py-1 text-xs font-bold rounded bg-blue-500/20 text-blue-400 border border-blue-500/30"><span class="hidden md:inline">Tool System</span><span class="md:hidden">T2</span></a>
+                <a href="../trilha3/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Agent Intelligence</span><span class="md:hidden">T3</span></a>
+                <a href="../trilha4/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Interface</span><span class="md:hidden">T4</span></a>
+                <a href="../trilha5/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Infrastructure</span><span class="md:hidden">T5</span></a>
+                <a href="../trilha6/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Connectivity</span><span class="md:hidden">T6</span></a>
+                <a href="../trilha7/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Unreleased Features</span><span class="md:hidden">T7</span></a>
+                <a href="../trilha8/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Big Picture</span><span class="md:hidden">T8</span></a>
+                <button onclick="toggleTheme()" class="ml-2 p-2 rounded-lg dark:hover:bg-dark-800 dark:text-gray-400" title="Alternar tema">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <div class="max-w-5xl mx-auto px-4 pt-4">
+        <div class="flex items-center gap-2 text-sm dark:text-gray-400">
+            <a href="../trilha2/" class="hover:text-blue-400 transition-colors">Trilha 2</a>
+            <span>&#x203A;</span>
+            <span class="text-blue-400">2.2 The Bash Tool</span>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-gradient-to-b from-blue-900/30 to-transparent py-12 px-4">
+        <div class="max-w-5xl mx-auto">
+            <span class="inline-block px-3 py-1 text-xs font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 rounded-full border border-blue-500/30 mb-4">MODULO 2.2</span>
+            <h1 class="text-3xl md:text-4xl font-extrabold mb-3">&#x1F4BB; The Bash Tool</h1>
+            <p class="text-lg dark:text-gray-300 max-w-3xl mb-6">O gateway do sistema operacional: 7 camadas de processamento, 23 security validators, shell snapshot, sandboxing e output handling.</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-xl">
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-xl font-bold text-blue-400">~60</div>
+                    <div class="text-xs dark:text-gray-400">Minutos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-xl font-bold text-blue-400">23</div>
+                    <div class="text-xs dark:text-gray-400">Validators</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-xl font-bold text-blue-400">6</div>
+                    <div class="text-xs dark:text-gray-400">Build Stages</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-xl font-bold text-blue-400">Avancado</div>
+                    <div class="text-xs dark:text-gray-400">Nivel</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 pb-20 space-y-10">
+
+        <!-- Section 1: Architecture -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">1</span>
+                <h2 class="text-xl font-bold dark:text-white">Architecture e Command Pipeline</h2>
+            </div>
+            <p class="dark:text-gray-300 mb-4">O Bash Tool processa comandos por "sete camadas distintas" antes do subprocess spawn e mais tres durante o retorno do output.</p>
+
+            <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-4">
+                <div class="text-blue-400 font-bold text-sm mb-2">CINCO DIRETORIOS-FONTE</div>
+                <ul class="dark:text-gray-300 text-sm space-y-1">
+                    <li><code class="bg-dark-800 px-1 rounded text-xs">tools/BashTool/</code> -- tool definition, permissions, UI classification</li>
+                    <li><code class="bg-dark-800 px-1 rounded text-xs">tools/BashTool/bash*.ts</code> -- security validators and permission rules</li>
+                    <li><code class="bg-dark-800 px-1 rounded text-xs">utils/bash/</code> -- AST parsing, command splitting, ShellSnapshot</li>
+                    <li><code class="bg-dark-800 px-1 rounded text-xs">utils/shell/</code> -- BashProvider, output limits, shell detection</li>
+                    <li><code class="bg-dark-800 px-1 rounded text-xs">utils/sandbox/</code> -- filesystem and network policy enforcement</li>
+                </ul>
+            </div>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">Input/Output Schema</h3>
+            <p class="dark:text-gray-300 mb-3 text-sm">O tool mantem dois schemas: publico (exposto ao Claude) e completo (interno). O campo <code class="bg-dark-800 px-1 rounded text-xs">_simulatedSedEdit</code> permanece oculto do modelo para prevenir bypass de dialogos de permissao.</p>
+
+            <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mb-4">
+                <div class="text-amber-400 font-bold text-sm mb-2">NOTA CRITICA</div>
+                <p class="dark:text-gray-300 text-sm">O shell provider usa <code class="bg-dark-800 px-1 rounded text-xs">2&gt;&amp;1</code> -- stderr e merged no stdout no nivel de file-descriptor. O campo <code class="bg-dark-800 px-1 rounded text-xs">stderr</code> no output schema e portanto sempre vazio para o path normal de execucao.</p>
+            </div>
+        </section>
+
+        <!-- Section 2: Shell Snapshot -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">2</span>
+                <h2 class="text-xl font-bold dark:text-white">Shell Snapshot System</h2>
+            </div>
+            <p class="dark:text-gray-300 mb-4">Cada sessao captura o ambiente shell interativo uma vez em <code class="bg-dark-800 px-1 rounded text-sm">~/.claude/shell-snapshots/snapshot-{shell}-{timestamp}-{random}.sh</code>.</p>
+
+            <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 mb-4">
+                <div class="text-emerald-400 font-bold text-sm mb-2">SNAPSHOT CAPTURA</div>
+                <ol class="dark:text-gray-300 text-sm space-y-1 list-decimal list-inside">
+                    <li>User aliases and functions (filtradas para completion functions)</li>
+                    <li>Shell options (setopt/shopt)</li>
+                    <li>PATH export</li>
+                    <li>Embedded ripgrep shim (se system rg ausente)</li>
+                    <li>find/grep shims (em builds nativos)</li>
+                </ol>
+            </div>
+
+            <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                <div class="text-amber-400 font-bold text-sm mb-2">GRACEFUL DEGRADATION</div>
+                <p class="dark:text-gray-300 text-sm">Se snapshot creation falhar, a promise resolve para <code class="bg-dark-800 px-1 rounded text-xs">undefined</code>. Comandos entao spawnam com flag <code class="bg-dark-800 px-1 rounded text-xs">-l</code> (login shell), perdendo aliases/functions mas permanecendo funcionais. TOCTOU awareness: antes de cada comando, <code class="bg-dark-800 px-1 rounded text-xs">access(snapshotFilePath)</code> verifica existencia do arquivo.</p>
+            </div>
+        </section>
+
+        <!-- Section 3: Command Building Pipeline -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">3</span>
+                <h2 class="text-xl font-bold dark:text-white">Command Building Pipeline (6 Stages)</h2>
+            </div>
+            <p class="dark:text-gray-300 mb-4"><code class="bg-dark-800 px-1 rounded text-sm">buildExecCommand()</code> monta a string completa do shell em seis estagios:</p>
+
+            <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 mb-4">
+                <div class="text-emerald-400 font-bold text-sm mb-2">6 ESTAGIOS</div>
+                <ol class="dark:text-gray-300 text-sm space-y-1 list-decimal list-inside">
+                    <li><strong>Windows null redirect rewrite</strong> -- <code class="bg-dark-800 px-1 rounded text-xs">2&gt;nul</code> vira <code class="bg-dark-800 px-1 rounded text-xs">2&gt;/dev/null</code></li>
+                    <li><strong>Stdin redirect decision</strong> -- append <code class="bg-dark-800 px-1 rounded text-xs">&lt; /dev/null</code> condicionalmente</li>
+                    <li><strong>Shell quoting</strong> -- wrap em single quotes para eval</li>
+                    <li><strong>Pipe rearrangement</strong> -- move <code class="bg-dark-800 px-1 rounded text-xs">&lt; /dev/null</code> para primeiro segmento se pipes existem</li>
+                    <li><strong>Assembly</strong> -- source snapshot, session env, disable extglob, eval command</li>
+                    <li><strong>Prefix formatting</strong> -- aplica CLAUDE_CODE_SHELL_PREFIX se definido</li>
+                </ol>
+            </div>
+
+            <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-4">
+                <div class="text-blue-400 font-bold text-sm mb-2">POR QUE EVAL QUOTING?</div>
+                <p class="dark:text-gray-300 text-sm">Bash faz parse da linha inteira antes de executar. Aliases de snapshots sourced so ficam disponiveis apos <code class="bg-dark-800 px-1 rounded text-xs">source</code> rodar. Usar <code class="bg-dark-800 px-1 rounded text-xs">eval 'command'</code> cria um segundo parse pass onde aliases estao vivos.</p>
+            </div>
+
+            <div class="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+                <div class="text-red-400 font-bold text-sm mb-2">EXTGLOB DISABLING</div>
+                <p class="dark:text-gray-300 text-sm">Apos sourcing do snapshot, extended glob patterns sao explicitamente desabilitados. Extended globs como <code class="bg-dark-800 px-1 rounded text-xs">!(pattern)</code> podem ser triggered por filenames, criando ataques de post-validation expansion.</p>
+            </div>
+        </section>
+
+        <!-- Section 4: 23 Security Validators -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">4</span>
+                <h2 class="text-xl font-bold dark:text-white">The 23 Security Validators</h2>
+            </div>
+            <p class="dark:text-gray-300 mb-4">Cada validator em <code class="bg-dark-800 px-1 rounded text-sm">bashCommandIsSafe()</code> retorna um de tres resultados: <strong class="text-emerald-400">allow</strong> (early-allow, skip restantes), <strong class="text-gray-400">passthrough</strong> (sem opiniao, continua chain), <strong class="text-amber-400">ask</strong> (trigger permission dialog).</p>
+
+            <div class="overflow-x-auto mb-4">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b dark:border-gray-700">
+                            <th class="text-left p-2 text-blue-400">#</th>
+                            <th class="text-left p-2 text-blue-400">Name</th>
+                            <th class="text-left p-2 text-blue-400">Purpose</th>
+                        </tr>
+                    </thead>
+                    <tbody class="dark:text-gray-300">
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">1</td><td class="p-2">INCOMPLETE_COMMANDS</td><td class="p-2">Detects fragments (tabs, flags, operators)</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">2</td><td class="p-2">JQ_SYSTEM_FUNCTION</td><td class="p-2">Blocks jq intrinsics (env, path, builtins, debug)</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">3</td><td class="p-2">JQ_FILE_ARGUMENTS</td><td class="p-2">Blocks --args, --jsonargs, --rawfile patterns</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">4</td><td class="p-2">OBFUSCATED_FLAGS</td><td class="p-2">Detects encoded/spaced flags differing from shell</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">5</td><td class="p-2">SHELL_METACHARACTERS</td><td class="p-2">Unquoted ;, &amp;&amp;, ||, | compound detection</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">6</td><td class="p-2">DANGEROUS_VARIABLES</td><td class="p-2">$BASH_ENV, $ENV, $CDPATH, $IFS references</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">7</td><td class="p-2">NEWLINES</td><td class="p-2">Unquoted newlines (command separators)</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">8-10</td><td class="p-2">DANGEROUS_PATTERNS</td><td class="p-2">Substitution, input redirection, output redirection</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">11</td><td class="p-2">IFS_INJECTION</td><td class="p-2">IFS= assignment or unquoted $IFS</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">12</td><td class="p-2">GIT_COMMIT_SUBSTITUTION</td><td class="p-2">Special early-allow for git commit -m</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">13</td><td class="p-2">PROC_ENVIRON_ACCESS</td><td class="p-2">/proc/*/environ references</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">14-16</td><td class="p-2">TOKEN/BACKSLASH/BRACE</td><td class="p-2">Malformed tokens, escaped whitespace, brace expansion</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">17-18</td><td class="p-2">CONTROL/UNICODE</td><td class="p-2">Control characters, non-ASCII whitespace</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">19-21</td><td class="p-2">HASH/ZSH/BACKSLASH</td><td class="p-2">Mid-word hash, zsh commands, escaped operators</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">22-23</td><td class="p-2">COMMENT/QUOTED</td><td class="p-2">Comment-quote desync, quoted newline</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">Five Pre-Computed Command Views</h3>
+            <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 mb-4">
+                <div class="text-emerald-400 font-bold text-sm mb-2">VALIDATION CONTEXT</div>
+                <ul class="dark:text-gray-300 text-sm space-y-1">
+                    <li><strong>originalCommand</strong> -- verbatim do Claude</li>
+                    <li><strong>baseCommand</strong> -- primeiro token apos env vars</li>
+                    <li><strong>unquotedContent</strong> -- double-quotes stripped</li>
+                    <li><strong>fullyUnquotedContent</strong> -- ambos tipos de quotes stripped</li>
+                    <li><strong>unquotedKeepQuoteChars</strong> -- content stripped mas delimiters mantidos (para mid-word-hash detection)</li>
+                </ul>
+            </div>
+
+            <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                <div class="text-amber-400 font-bold text-sm mb-2">50-SUBCOMMAND CAP</div>
+                <p class="dark:text-gray-300 text-sm">Compound commands sao split e validados individualmente com cap de 50. Alem disso, o sistema retorna <code class="bg-dark-800 px-1 rounded text-xs">ask</code> como safe default. Previne "CPU-starvation DoS from exponentially growing subcommand arrays."</p>
+            </div>
+        </section>
+
+        <!-- Section 5: Permission Plumbing & Sandboxing -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">5</span>
+                <h2 class="text-xl font-bold dark:text-white">Permission Plumbing e Sandboxing</h2>
+            </div>
+            <p class="dark:text-gray-300 mb-4"><code class="bg-dark-800 px-1 rounded text-sm">checkPermissions()</code> chama <code class="bg-dark-800 px-1 rounded text-sm">bashToolHasPermission()</code> que empilha checks independentes:</p>
+
+            <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 mb-4">
+                <div class="text-emerald-400 font-bold text-sm mb-2">6 CHECKS INDEPENDENTES</div>
+                <ol class="dark:text-gray-300 text-sm space-y-1 list-decimal list-inside">
+                    <li><strong>Permission mode</strong> -- read-only mode check</li>
+                    <li><strong>Security validators</strong> -- 23-validator chain</li>
+                    <li><strong>Read-only constraints</strong> -- filesystem write restrictions</li>
+                    <li><strong>Path constraints</strong> -- allowlist/denylist checking</li>
+                    <li><strong>Sed constraints</strong> -- in-place edit detection</li>
+                    <li><strong>Command operator permissions</strong> -- per-subcommand rule matching</li>
+                </ol>
+            </div>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">Rule Matching Modes</h3>
+            <div class="overflow-x-auto mb-4">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b dark:border-gray-700">
+                            <th class="text-left p-2 text-blue-400">Mode</th>
+                            <th class="text-left p-2 text-blue-400">Example</th>
+                            <th class="text-left p-2 text-blue-400">Matches</th>
+                        </tr>
+                    </thead>
+                    <tbody class="dark:text-gray-300">
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">Exact</td><td class="p-2"><code class="bg-dark-800 px-1 rounded text-xs">Bash(git status)</code></td><td class="p-2">Only exact command</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">Prefix</td><td class="p-2"><code class="bg-dark-800 px-1 rounded text-xs">Bash(npm run:*)</code></td><td class="p-2">npm run + anything</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">Wildcard</td><td class="p-2"><code class="bg-dark-800 px-1 rounded text-xs">Bash(git * --force)</code></td><td class="p-2">Matching glob</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+                <div class="text-red-400 font-bold text-sm mb-2">SANDBOX != SECURITY CONTROL</div>
+                <p class="dark:text-gray-300 text-sm"><code class="bg-dark-800 px-1 rounded text-xs">sandbox.excludedCommands</code> e uma convenience feature -- permite tools como docker ou bazel rodarem sem sandboxing porque precisam de acesso direto ao processo. Mas NAO e um controle de seguranca. O dialogo de permissao e a fronteira real de seguranca.</p>
+            </div>
+        </section>
+
+        <!-- Section 6: Background Execution -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">6</span>
+                <h2 class="text-xl font-bold dark:text-white">Background Execution e Output Handling</h2>
+            </div>
+            <p class="dark:text-gray-300 mb-4">Tres paths produzem background execution:</p>
+
+            <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-4">
+                <div class="text-blue-400 font-bold text-sm mb-2">3 PATHS DE BACKGROUND</div>
+                <ul class="dark:text-gray-300 text-sm space-y-1">
+                    <li><strong>run_in_background: true</strong> -- model-initiated explicito</li>
+                    <li><strong>User Ctrl+B</strong> -- manual background (sets backgroundedByUser: true)</li>
+                    <li><strong>Auto-background</strong> -- apos 15 segundos em assistant mode (assistantAutoBackgrounded: true)</li>
+                </ul>
+            </div>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">Size Limits</h3>
+            <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 mb-4">
+                <div class="text-emerald-400 font-bold text-sm mb-2">OUTPUT LIMITS</div>
+                <ul class="dark:text-gray-300 text-sm space-y-1">
+                    <li><strong>BASH_MAX_OUTPUT_DEFAULT</strong> -- 30,000 chars (configuravel)</li>
+                    <li><strong>BASH_MAX_OUTPUT_UPPER_LIMIT</strong> -- 150,000 chars (hard cap)</li>
+                    <li>Outputs exceeding inline limit persistem em arquivo no tool-results directory</li>
+                    <li>Full output capped em 64MB via truncation</li>
+                </ul>
+            </div>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">Semantic Exit Code Interpretation</h3>
+            <p class="dark:text-gray-300 text-sm mb-3"><code class="bg-dark-800 px-1 rounded text-xs">interpretCommandResult()</code> mapeia non-zero codes para notas human-readable. Exemplo: grep retornando 1 significa "no matches" (nao erro); diff retornando 1 significa "files differ" (nao erro).</p>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">Claude Code Hints Protocol</h3>
+            <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                <div class="text-amber-400 font-bold text-sm mb-2">ZERO-TOKEN SIDE CHANNEL</div>
+                <p class="dark:text-gray-300 text-sm">CLIs com <code class="bg-dark-800 px-1 rounded text-xs">CLAUDECODE=1</code> emitem tags <code class="bg-dark-800 px-1 rounded text-xs">&lt;claude-code-hint /&gt;</code> para stderr (merged no stdout). Tool registra hints, strip antes do modelo ver output. Subagent outputs tambem stripped para que hints nao escapem a fronteira do agent.</p>
+            </div>
+        </section>
+
+        <!-- Section 7: UI Classification -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">7</span>
+                <h2 class="text-xl font-bold dark:text-white">UI Classification e Sed Special Case</h2>
+            </div>
+            <p class="dark:text-gray-300 mb-4">Comandos classificados para determinar collapse behavior default:</p>
+
+            <pre class="bg-dark-800 border border-gray-700/50 rounded-lg p-4 overflow-x-auto mb-4"><code class="text-sm text-green-400">BASH_SEARCH_COMMANDS = {find, grep, rg, ag, ack, ...}
+BASH_READ_COMMANDS = {cat, head, tail, jq, awk, ...}
+BASH_LIST_COMMANDS = {ls, tree, du}
+BASH_SILENT_COMMANDS = {mv, cp, rm, mkdir} // show "Done" instead of "(No output)"</code></pre>
+
+            <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                <div class="text-blue-400 font-bold text-sm mb-2">SED SPECIAL CASE</div>
+                <p class="dark:text-gray-300 text-sm">Comandos matching <code class="bg-dark-800 px-1 rounded text-xs">sed -i 's/.../.../' file</code> renderizam como file-edit operations usando FileEdit display name, provendo file-diff-style permission dialog. Para pipelines: TODAS as partes devem ser search/read para o pipeline todo ser colapsavel.</p>
+            </div>
+        </section>
+
+        <!-- Section 8: Environment Variable Stripping -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">8</span>
+                <h2 class="text-xl font-bold dark:text-white">Environment Variable Stripping</h2>
+            </div>
+            <p class="dark:text-gray-300 mb-4">Antes de rule matching, <code class="bg-dark-800 px-1 rounded text-sm">stripSafeWrappers()</code> executa two-phase stripping:</p>
+
+            <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 mb-4">
+                <div class="text-emerald-400 font-bold text-sm mb-2">TWO-PHASE STRIPPING</div>
+                <ul class="dark:text-gray-300 text-sm space-y-2">
+                    <li><strong>Phase 1:</strong> Strip leading env vars onde variable name esta em SAFE_ENV_VARS (build/locale/display vars). Notavelmente <strong class="text-red-400">exclui PATH, LD_PRELOAD, PYTHONPATH</strong>.</li>
+                    <li><strong>Phase 2:</strong> Strip wrapper commands (timeout, time, nice, nohup) com strict flag parsing.</li>
+                </ul>
+                <p class="dark:text-gray-300 text-sm mt-2">Ambas fases rodam em fixed-point loop, handling interleaved patterns.</p>
+            </div>
+        </section>
+
+        <!-- Summary -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-blue-500/30 p-6 bg-gradient-to-b from-blue-900/20 to-transparent">
+            <h2 class="text-xl font-bold dark:text-white mb-4">&#x1F3AF; Resumo e Takeaways</h2>
+            <div class="grid gap-3">
+                <div class="flex items-start gap-3">
+                    <span class="text-blue-400 font-bold text-sm mt-0.5">1</span>
+                    <p class="dark:text-gray-300 text-sm"><strong class="text-blue-400">Shell snapshot roda uma vez por sessao</strong> capturando aliases, functions, options, PATH sem login shell caro por comando.</p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-blue-400 font-bold text-sm mt-0.5">2</span>
+                    <p class="dark:text-gray-300 text-sm"><strong class="text-blue-400">6 estagios de command building</strong> com razoes especificas de seguranca/corretude para cada um.</p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-blue-400 font-bold text-sm mt-0.5">3</span>
+                    <p class="dark:text-gray-300 text-sm"><strong class="text-blue-400">23 validators formam defense-in-depth</strong> contra injection em niveis de character encoding, shell syntax e Zsh-specific.</p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-blue-400 font-bold text-sm mt-0.5">4</span>
+                    <p class="dark:text-gray-300 text-sm"><strong class="text-blue-400">Sandbox exclusions sao convenience, nao seguranca.</strong> O dialogo de permissao e a fronteira real.</p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-blue-400 font-bold text-sm mt-0.5">5</span>
+                    <p class="dark:text-gray-300 text-sm"><strong class="text-blue-400">Background execution tem 3 paths distinguiveis</strong> (explicit, user-initiated, auto 15s).</p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-blue-400 font-bold text-sm mt-0.5">6</span>
+                    <p class="dark:text-gray-300 text-sm"><strong class="text-blue-400">stderr sempre merged no stdout</strong> via 2&gt;&amp;1; campo stderr sempre vazio para comandos normais.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Navigation -->
+        <div class="flex justify-between items-center pt-6">
+            <a href="modulo-2-1.html" class="flex items-center gap-2 px-4 py-2 dark:bg-dark-800 rounded-lg border dark:border-gray-700/50 dark:text-gray-300 hover:border-blue-500/50 transition-colors text-sm">
+                <span>&#x2190;</span> 2.1 Tool System
+            </a>
+            <a href="modulo-2-3.html" class="flex items-center gap-2 px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg border border-blue-500/30 hover:bg-blue-500/30 transition-colors text-sm">
+                2.3 File Tools <span>&#x2192;</span>
+            </a>
+        </div>
+    </main>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { primaryColor: '#1e293b', primaryTextColor: '#e2e8f0', lineColor: '#3b82f6' } });
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.classList.contains('dark');
+            html.classList.toggle('dark', !isDark);
+            html.classList.toggle('light', isDark);
+            localStorage.setItem('theme', isDark ? 'light' : 'dark');
+        }
+
+        (function() {
+            const saved = localStorage.getItem('theme');
+            if (saved === 'light') {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+            }
+        })();
+    </script>
+</body>
+</html>

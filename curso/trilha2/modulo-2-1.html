@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2.1 The Tool System - Claude Code Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: { 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a' },
+                        dark: { 800: '#1e293b', 900: '#0f172a', 950: '#020617' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html.light { background: #f8fafc; color: #1e293b; }
+        html.light .dark\:bg-dark-950 { background: #f8fafc !important; }
+        html.light .dark\:bg-dark-900 { background: #ffffff !important; }
+        html.light .dark\:bg-dark-800 { background: #f1f5f9 !important; }
+        html.light .dark\:bg-dark-900\/50 { background: rgba(255,255,255,0.8) !important; }
+        html.light .dark\:bg-dark-800\/50 { background: rgba(241,245,249,0.8) !important; }
+        html.light .dark\:text-white { color: #1e293b !important; }
+        html.light .dark\:text-gray-100 { color: #334155 !important; }
+        html.light .dark\:text-gray-300 { color: #475569 !important; }
+        html.light .dark\:text-gray-400 { color: #64748b !important; }
+        html.light .dark\:text-gray-500 { color: #94a3b8 !important; }
+        html.light .dark\:border-gray-700 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-800 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-700\/50 { border-color: rgba(226,232,240,0.5) !important; }
+        html.light .text-blue-400 { color: #2563eb !important; }
+        html.light .text-blue-500 { color: #1d4ed8 !important; }
+        html.light .bg-blue-500\/10 { background: rgba(37,99,235,0.08) !important; }
+        html.light .bg-blue-500\/20 { background: rgba(37,99,235,0.12) !important; }
+        html.light .border-blue-500\/30 { border-color: rgba(37,99,235,0.2) !important; }
+        html.light .from-blue-900\/30 { --tw-gradient-from: rgba(37,99,235,0.08) !important; }
+        html.light nav { background: rgba(255,255,255,0.85) !important; border-bottom: 1px solid #e2e8f0 !important; }
+        html.light .dark\:hover\:bg-dark-800:hover { background: #e2e8f0 !important; }
+        html.light pre { background: #f1f5f9 !important; border-color: #e2e8f0 !important; }
+        html.light code { color: #1e293b !important; }
+        html.light .concept-box { background: rgba(37,99,235,0.06) !important; border-color: rgba(37,99,235,0.2) !important; }
+        html.light .data-box { background: rgba(16,185,129,0.06) !important; border-color: rgba(16,185,129,0.2) !important; }
+        html.light .tip-box { background: rgba(245,158,11,0.06) !important; border-color: rgba(245,158,11,0.2) !important; }
+        html.light .dodont-box { background: rgba(239,68,68,0.06) !important; border-color: rgba(239,68,68,0.2) !important; }
+    </style>
+</head>
+<body class="dark:bg-dark-950 dark:text-white font-sans min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-40 backdrop-blur-xl dark:bg-dark-900/50 border-b dark:border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
+            <a href="../../index.html" class="text-yellow-400 font-bold text-lg whitespace-nowrap">&#x1F4BB; Claude Code Deep Dive</a>
+            <span class="dark:text-gray-600">|</span>
+            <a href="https://inema.club" target="_blank" class="text-sky-400 text-sm font-medium hover:underline">INEMA.CLUB</a>
+            <div class="flex items-center gap-1 ml-auto flex-wrap">
+                <a href="../trilha1/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Core Architecture</span><span class="md:hidden">T1</span></a>
+                <a href="../trilha2/" class="px-2 py-1 text-xs font-bold rounded bg-blue-500/20 text-blue-400 border border-blue-500/30"><span class="hidden md:inline">Tool System</span><span class="md:hidden">T2</span></a>
+                <a href="../trilha3/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Agent Intelligence</span><span class="md:hidden">T3</span></a>
+                <a href="../trilha4/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Interface</span><span class="md:hidden">T4</span></a>
+                <a href="../trilha5/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Infrastructure</span><span class="md:hidden">T5</span></a>
+                <a href="../trilha6/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Connectivity</span><span class="md:hidden">T6</span></a>
+                <a href="../trilha7/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Unreleased Features</span><span class="md:hidden">T7</span></a>
+                <a href="../trilha8/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Big Picture</span><span class="md:hidden">T8</span></a>
+                <button onclick="toggleTheme()" class="ml-2 p-2 rounded-lg dark:hover:bg-dark-800 dark:text-gray-400" title="Alternar tema">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <div class="max-w-5xl mx-auto px-4 pt-4">
+        <div class="flex items-center gap-2 text-sm dark:text-gray-400">
+            <a href="../trilha2/" class="hover:text-blue-400 transition-colors">Trilha 2</a>
+            <span>&#x203A;</span>
+            <span class="text-blue-400">2.1 The Tool System</span>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-gradient-to-b from-blue-900/30 to-transparent py-12 px-4">
+        <div class="max-w-5xl mx-auto">
+            <span class="inline-block px-3 py-1 text-xs font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 rounded-full border border-blue-500/30 mb-4">MODULO 2.1</span>
+            <h1 class="text-3xl md:text-4xl font-extrabold mb-3">&#x1F527; The Tool System</h1>
+            <p class="text-lg dark:text-gray-300 max-w-3xl mb-6">A interface Tool, o pipeline de registro e filtragem, orquestracao de concorrencia, permissoes e o fluxo completo de execucao.</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-xl">
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-xl font-bold text-blue-400">~50</div>
+                    <div class="text-xs dark:text-gray-400">Minutos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-xl font-bold text-blue-400">8</div>
+                    <div class="text-xs dark:text-gray-400">Topicos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-xl font-bold text-blue-400">6</div>
+                    <div class="text-xs dark:text-gray-400">Arquivos-fonte</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-xl font-bold text-blue-400">Avancado</div>
+                    <div class="text-xs dark:text-gray-400">Nivel</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 pb-20 space-y-10">
+
+        <!-- Section 1: Overview & Architecture -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">1</span>
+                <h2 class="text-xl font-bold dark:text-white">Visao Geral e Arquitetura</h2>
+            </div>
+            <p class="dark:text-gray-300 mb-4">Toda capacidade que o Claude Code expoe ao modelo -- leitura de arquivos, execucao de bash, busca web, chamadas MCP -- e uma <strong class="text-blue-400">Tool</strong>. O tool system e a ponte entre o raciocinio em linguagem natural da IA e os efeitos colaterais concretos na sua maquina.</p>
+
+            <div class="concept-box bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-4">
+                <div class="text-blue-400 font-bold text-sm mb-2">CONCEITO CENTRAL</div>
+                <p class="dark:text-gray-300 text-sm">O ciclo de vida completo de uma invocacao de ferramenta segue 8 etapas: Interface -> Registration -> Routing -> Validation -> Permission -> Execution -> Result Processing -> Orchestration.</p>
+            </div>
+
+            <p class="dark:text-gray-300 mb-4"><strong>Arquivos cobertos:</strong> <code class="bg-dark-800 px-1 rounded text-sm">Tool.ts</code>, <code class="bg-dark-800 px-1 rounded text-sm">tools.ts</code>, <code class="bg-dark-800 px-1 rounded text-sm">tools/utils.ts</code>, <code class="bg-dark-800 px-1 rounded text-sm">services/tools/toolOrchestration.ts</code>, <code class="bg-dark-800 px-1 rounded text-sm">services/tools/toolExecution.ts</code>, <code class="bg-dark-800 px-1 rounded text-sm">services/tools/StreamingToolExecutor.ts</code></p>
+
+            <!-- Mermaid Diagram -->
+            <div class="my-6">
+                <h3 class="text-sm font-bold dark:text-gray-400 uppercase tracking-wider mb-3">Tool Lifecycle</h3>
+                <div class="mermaid text-sm">
+flowchart TD
+    A["Tool Interface\n(Tool.ts)\nname - inputSchema - call\ncheckPermissions - isConcurrencySafe"] -->|"buildTool() fills defaults"| B
+    B["Registration\n(tools.ts)\ngetAllBaseTools - getTools\nassembleToolPool"] -->|"readonly Tool[]"| C
+    C["Routing / Dispatch\n(toolExecution.ts)\nfindToolByName - alias fallback"] -->|"tool found"| D
+    D["Input Validation\nZod safeParse\ntool.validateInput\nbackfillObservableInput"] -->|"parsedInput"| E
+    E["Permission Gate\nPreToolUse hooks\ncanUseTool - allow/deny rules\nInteractive prompt"] -->|"allow"| F
+    F["Execution\ntool.call - async generator\nToolResult + contextModifier\nPostToolUse hooks"] -->|"ToolResult"| G
+    G["Result Processing\nmapToolResultToToolResultBlockParam\nprocessToolResultBlock\nyield MessageUpdateLazy"] -->|"MessageUpdate"| H
+    H["Orchestration\npartitionToolCalls\nconcurrent vs serial\nsibling-abort on Bash error"]
+    style A fill:#1e293b,stroke:#3b82f6,color:#e2e8f0
+    style B fill:#1e293b,stroke:#3b82f6,color:#e2e8f0
+    style C fill:#1e293b,stroke:#6366f1,color:#e2e8f0
+    style D fill:#1e293b,stroke:#6366f1,color:#e2e8f0
+    style E fill:#1e293b,stroke:#f59e0b,color:#e2e8f0
+    style F fill:#1e293b,stroke:#10b981,color:#e2e8f0
+    style G fill:#1e293b,stroke:#6366f1,color:#e2e8f0
+    style H fill:#1e293b,stroke:#ef4444,color:#e2e8f0
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Tool Interface -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">2</span>
+                <h2 class="text-xl font-bold dark:text-white">The Tool Interface (Tool.ts)</h2>
+            </div>
+            <p class="dark:text-gray-300 mb-4">O tipo <code class="bg-dark-800 px-1 rounded text-sm">Tool&lt;Input, Output, P&gt;</code> e um <strong class="text-blue-400">protocol contract</strong> -- um tipo estrutural TypeScript que toda ferramenta deve satisfazer. E generico sobre tres parametros: o schema Zod de input, o tipo de output e o shape do evento de progresso.</p>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">Core Required Members</h3>
+            <pre class="bg-dark-800 border border-gray-700/50 rounded-lg p-4 overflow-x-auto mb-4"><code class="text-sm text-green-400">export type Tool&lt;
+  Input extends AnyObject,
+  Output,
+  P extends ToolProgressData
+&gt; = {
+  name: string                 // primary identifier the model uses
+  aliases?: string[]          // legacy names for backward compat
+  inputSchema: Input          // Zod schema -- source of truth for validation
+  maxResultSizeChars: number  // overflow -> persist to disk
+
+  call(
+    args: z.infer&lt;Input&gt;,
+    context: ToolUseContext,
+    canUseTool: CanUseToolFn,
+    parentMessage: AssistantMessage,
+    onProgress?: ToolCallProgress&lt;P&gt;
+  ): Promise&lt;ToolResult&lt;Output&gt;&gt;
+
+  checkPermissions(
+    input: z.infer&lt;Input&gt;,
+    context: ToolUseContext
+  ): Promise&lt;PermissionResult&gt;
+
+  isConcurrencySafe(input: z.infer&lt;Input&gt;): boolean
+  isReadOnly(input: z.infer&lt;Input&gt;): boolean
+  isDestructive?(input: z.infer&lt;Input&gt;): boolean
+}</code></pre>
+
+            <div class="concept-box bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-4">
+                <div class="text-blue-400 font-bold text-sm mb-2">INSIGHT</div>
+                <p class="dark:text-gray-300 text-sm">Protocol, not class hierarchy. <code class="bg-dark-800 px-1 rounded text-xs">Tool</code> e um tipo estrutural TypeScript. Qualquer objeto que satisfaca a interface e uma tool -- built-in, MCP ou gerada dinamicamente.</p>
+            </div>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">ToolResult e contextModifier</h3>
+            <pre class="bg-dark-800 border border-gray-700/50 rounded-lg p-4 overflow-x-auto mb-4"><code class="text-sm text-green-400">export type ToolResult&lt;T&gt; = {
+  data: T
+  newMessages?: (UserMessage | AssistantMessage | ...)[]
+  // Only honored for non-concurrency-safe tools
+  contextModifier?: (context: ToolUseContext) =&gt; ToolUseContext
+}</code></pre>
+            <p class="dark:text-gray-300 text-sm">O <code class="bg-dark-800 px-1 rounded text-xs">contextModifier</code> e como uma tool (ex: <code class="bg-dark-800 px-1 rounded text-xs">EnterPlanMode</code>) muta estado compartilhado sem acessar variaveis globais. Tools concorrentes NAO podem usar contextModifier -- limitacao conhecida documentada no StreamingToolExecutor.</p>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3 mt-4">Metodos Opcionais: UI e Classifier</h3>
+            <div class="data-box bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4">
+                <div class="text-emerald-400 font-bold text-sm mb-2">METODOS DE INTERFACE</div>
+                <ul class="dark:text-gray-300 text-sm space-y-1">
+                    <li><code class="bg-dark-800 px-1 rounded text-xs">renderToolUseMessage()</code> -- React node shown while streaming tool input</li>
+                    <li><code class="bg-dark-800 px-1 rounded text-xs">renderToolResultMessage()</code> -- React node for the result in transcript</li>
+                    <li><code class="bg-dark-800 px-1 rounded text-xs">toAutoClassifierInput()</code> -- compact representation for security classifier; return '' to skip</li>
+                    <li><code class="bg-dark-800 px-1 rounded text-xs">interruptBehavior()</code> -- 'cancel' or 'block': what happens when user types during tool execution</li>
+                    <li><code class="bg-dark-800 px-1 rounded text-xs">shouldDefer</code> / <code class="bg-dark-800 px-1 rounded text-xs">alwaysLoad</code> -- ToolSearch deferred loading flags</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Section 3: buildTool() Factory -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">3</span>
+                <h2 class="text-xl font-bold dark:text-white">buildTool() -- Factory e Fail-Closed Defaults</h2>
+            </div>
+            <p class="dark:text-gray-300 mb-4">Em vez de forcar autores a suprir cada metodo, <code class="bg-dark-800 px-1 rounded text-sm">buildTool()</code> faz merge de um <code class="bg-dark-800 px-1 rounded text-sm">ToolDef</code> (parcial) com defaults seguros. Os defaults sao <strong class="text-blue-400">fail-closed</strong>: assumem writes, assumem nao-safe para concorrencia.</p>
+
+            <pre class="bg-dark-800 border border-gray-700/50 rounded-lg p-4 overflow-x-auto mb-4"><code class="text-sm text-green-400">const TOOL_DEFAULTS = {
+  isEnabled:         () =&gt; true,
+  isConcurrencySafe: () =&gt; false,   // conservative: assume state mutation
+  isReadOnly:        () =&gt; false,
+  isDestructive:     () =&gt; false,
+  checkPermissions:  (input) =&gt;
+    Promise.resolve({ behavior: 'allow', updatedInput: input }),
+  toAutoClassifierInput: () =&gt; '',
+  userFacingName:    () =&gt; '',
+}
+
+export function buildTool&lt;D extends AnyToolDef&gt;(def: D): BuiltTool&lt;D&gt; {
+  return {
+    ...TOOL_DEFAULTS,
+    userFacingName: () =&gt; def.name,
+    ...def,
+  } as BuiltTool&lt;D&gt;
+}</code></pre>
+
+            <div class="tip-box bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                <div class="text-amber-400 font-bold text-sm mb-2">POR QUE FAIL-CLOSED?</div>
+                <p class="dark:text-gray-300 text-sm"><code class="bg-dark-800 px-1 rounded text-xs">isConcurrencySafe</code> defaulta para <code class="bg-dark-800 px-1 rounded text-xs">false</code> para assumir mutacao de estado. Execucao paralela requer opt-in explicito. Uma tool custom roda serialmente por padrao ate que o autor confirme que e segura para concorrencia.</p>
+            </div>
+        </section>
+
+        <!-- Section 4: Registration Pipeline -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">4</span>
+                <h2 class="text-xl font-bold dark:text-white">Three-Tier Registration Pipeline</h2>
+            </div>
+            <p class="dark:text-gray-300 mb-4"><code class="bg-dark-800 px-1 rounded text-sm">tools.ts</code> e a <strong class="text-blue-400">source of truth</strong> para quais tools existem. Implementa um pipeline de assembly de tres camadas.</p>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">getAllBaseTools() -- Catalogo Exaustivo</h3>
+            <pre class="bg-dark-800 border border-gray-700/50 rounded-lg p-4 overflow-x-auto mb-4"><code class="text-sm text-green-400">export function getAllBaseTools(): Tools {
+  return [
+    AgentTool, TaskOutputTool, BashTool,
+    ...(hasEmbeddedSearchTools() ? [] : [GlobTool, GrepTool]),
+    FileReadTool, FileEditTool, FileWriteTool,
+    WebFetchTool, TodoWriteTool, WebSearchTool,
+    // ... 30+ more tools, conditionally included
+    ...(isToolSearchEnabledOptimistic() ? [ToolSearchTool] : []),
+  ]
+}</code></pre>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">getTools() -- Filtrado por Contexto</h3>
+            <div class="data-box bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 mb-4">
+                <div class="text-emerald-400 font-bold text-sm mb-2">FILTROS APLICADOS</div>
+                <ul class="dark:text-gray-300 text-sm space-y-1">
+                    <li><strong>Simple mode</strong> (<code class="bg-dark-800 px-1 rounded text-xs">CLAUDE_CODE_SIMPLE</code>) -- apenas Bash, Read, Edit</li>
+                    <li><strong>REPL mode</strong> -- esconde tools primitivas; vivem dentro da REPL VM</li>
+                    <li><strong>Deny rules</strong> -- filtra tools matching <code class="bg-dark-800 px-1 rounded text-xs">alwaysDenyRules</code></li>
+                    <li><strong>isEnabled()</strong> -- cada tool pode vetar a si mesma</li>
+                </ul>
+            </div>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">assembleToolPool() -- Built-ins + MCP</h3>
+            <pre class="bg-dark-800 border border-gray-700/50 rounded-lg p-4 overflow-x-auto mb-4"><code class="text-sm text-green-400">export function assembleToolPool(
+  permissionContext: ToolPermissionContext,
+  mcpTools: Tools,
+): Tools {
+  const builtInTools = getTools(permissionContext)
+  const allowedMcpTools = filterToolsByDenyRules(mcpTools, permissionContext)
+
+  // Built-ins sorted alphabetically, then MCP tools sorted alphabetically.
+  // Keeps a stable cache breakpoint between the two groups.
+  const byName = (a, b) =&gt; a.name.localeCompare(b.name)
+  return uniqBy(
+    [...builtInTools].sort(byName).concat(allowedMcpTools.sort(byName)),
+    'name',
+  )
+}</code></pre>
+
+            <div class="tip-box bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                <div class="text-amber-400 font-bold text-sm mb-2">CACHE STABILITY</div>
+                <p class="dark:text-gray-300 text-sm">Sorting built-ins e MCP tools como dois grupos alfabeticos separados preserva o breakpoint de cache do servidor. Interleaving quebraria o cache sempre que uma MCP tool fosse adicionada ou renomeada.</p>
+            </div>
+        </section>
+
+        <!-- Section 5: Orchestration -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">5</span>
+                <h2 class="text-xl font-bold dark:text-white">Orchestration e Concurrency</h2>
+            </div>
+            <p class="dark:text-gray-300 mb-4">Quando uma resposta do modelo contem multiplos blocos <code class="bg-dark-800 px-1 rounded text-sm">tool_use</code>, o orchestrator decide <strong class="text-blue-400">quais rodam concorrentemente e quais serialmente</strong> usando <code class="bg-dark-800 px-1 rounded text-sm">partitionToolCalls()</code>.</p>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">Algoritmo de Particionamento</h3>
+            <pre class="bg-dark-800 border border-gray-700/50 rounded-lg p-4 overflow-x-auto mb-4"><code class="text-sm text-green-400">// Simplified from partitionToolCalls()
+for (const toolUse of toolUseMessages) {
+  const safe = isConcurrencySafe(toolUse)
+  if (safe &amp;&amp; lastBatch?.isConcurrencySafe) {
+    lastBatch.blocks.push(toolUse)       // extend parallel group
+  } else {
+    acc.push({ isConcurrencySafe: safe, blocks: [toolUse] })
+  }
+}</code></pre>
+
+            <div class="concept-box bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-4">
+                <div class="text-blue-400 font-bold text-sm mb-2">CONCORRENCIA DATA-DRIVEN</div>
+                <p class="dark:text-gray-300 text-sm"><code class="bg-dark-800 px-1 rounded text-xs">isConcurrencySafe(input)</code> e chamado per-tool-call, nao per-tool-type. Um Bash tool rodando <code class="bg-dark-800 px-1 rounded text-xs">ls</code> pode ser safe enquanto um rodando <code class="bg-dark-800 px-1 rounded text-xs">rm -rf</code> nao e. Ceiling de concorrencia: <code class="bg-dark-800 px-1 rounded text-xs">CLAUDE_CODE_MAX_TOOL_USE_CONCURRENCY</code> (default 10).</p>
+            </div>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">Context Modifier Dance</h3>
+            <pre class="bg-dark-800 border border-gray-700/50 rounded-lg p-4 overflow-x-auto"><code class="text-sm text-green-400">// Serial: apply immediately so next tool sees updated context
+if (update.contextModifier) {
+  currentContext = update.contextModifier.modifyContext(currentContext)
+}
+
+// Concurrent: queue, apply after batch
+queuedContextModifiers[toolUseID].push(modifyContext)
+// ... after all concurrent tools complete:
+for (const modifier of modifiers) {
+  currentContext = modifier(currentContext)
+}</code></pre>
+        </section>
+
+        <!-- Section 6: StreamingToolExecutor -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">6</span>
+                <h2 class="text-xl font-bold dark:text-white">StreamingToolExecutor</h2>
+            </div>
+            <p class="dark:text-gray-300 mb-4">A variante real-time: inicia tools enquanto blocos ainda stream da API, antes da resposta completa do modelo. E a classe usada em producao no modo streaming.</p>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">Tool Lifecycle States</h3>
+            <div class="data-box bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 mb-4">
+                <div class="text-emerald-400 font-bold text-sm mb-2">TOOLSTATUS</div>
+                <div class="dark:text-gray-300 text-sm space-y-1">
+                    <div><code class="bg-dark-800 px-1 rounded text-xs">queued</code> -- block received, waiting for concurrency slot</div>
+                    <div><code class="bg-dark-800 px-1 rounded text-xs">executing</code> -- runToolUse() generator being consumed</div>
+                    <div><code class="bg-dark-800 px-1 rounded text-xs">completed</code> -- results collected, not yet emitted to caller</div>
+                    <div><code class="bg-dark-800 px-1 rounded text-xs">yielded</code> -- emitted in order, done</div>
+                </div>
+            </div>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">Concurrency Guard: canExecuteTool()</h3>
+            <pre class="bg-dark-800 border border-gray-700/50 rounded-lg p-4 overflow-x-auto mb-4"><code class="text-sm text-green-400">private canExecuteTool(isConcurrencySafe: boolean): boolean {
+  const executing = this.tools.filter(t =&gt; t.status === 'executing')
+  return (
+    executing.length === 0 ||
+    (isConcurrencySafe &amp;&amp; executing.every(t =&gt; t.isConcurrencySafe))
+  )
+}</code></pre>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">Sibling Abort: Bash Errors Cascade</h3>
+            <div class="dodont-box bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+                <div class="text-red-400 font-bold text-sm mb-2">APENAS BASH CASCATA</div>
+                <p class="dark:text-gray-300 text-sm">Somente erros de Bash abortam siblings via <code class="bg-dark-800 px-1 rounded text-xs">siblingAbortController</code>. Read/WebFetch/etc sao tratados como independentes -- uma falha nao mata reads paralelos. Bash tem dependency chains implicitas (ex: mkdir falha -> comandos subsequentes sem sentido).</p>
+            </div>
+        </section>
+
+        <!-- Section 7: Execution Pipeline -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">7</span>
+                <h2 class="text-xl font-bold dark:text-white">Tool Execution Pipeline (toolExecution.ts)</h2>
+            </div>
+            <p class="dark:text-gray-300 mb-4"><code class="bg-dark-800 px-1 rounded text-sm">runToolUse()</code> e a funcao central de dispatch. O fluxo completo de <code class="bg-dark-800 px-1 rounded text-sm">checkPermissionsAndCallTool()</code> tem 9 etapas:</p>
+
+            <div class="data-box bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 mb-4">
+                <div class="text-emerald-400 font-bold text-sm mb-2">PIPELINE DE 9 ETAPAS</div>
+                <ol class="dark:text-gray-300 text-sm space-y-1 list-decimal list-inside">
+                    <li><strong>Zod validation</strong> -- inputSchema.safeParse(input). Falha retorna InputValidationError imediatamente.</li>
+                    <li><strong>Semantic validation</strong> -- tool.validateInput(). Checks custom per-tool (path traversal, file size limits).</li>
+                    <li><strong>Speculative classifier</strong> -- Bash inicia o allow-classifier antes dos hooks rodarem.</li>
+                    <li><strong>backfillObservableInput</strong> -- cria clone shallow. Clone e o que hooks e canUseTool veem.</li>
+                    <li><strong>PreToolUse hooks</strong> -- async generators; podem atualizar input, setar permission result, parar execucao.</li>
+                    <li><strong>canUseTool()</strong> -- permission gate principal. Checa always-allow/always-deny, auto-classifier, prompt interativo.</li>
+                    <li><strong>tool.call()</strong> -- execucao real com progress callback.</li>
+                    <li><strong>PostToolUse hooks</strong> -- rodam apos tool completar.</li>
+                    <li><strong>Result serialization</strong> -- mapToolResultToToolResultBlockParam() + size-budget processing.</li>
+                </ol>
+            </div>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">Defense-in-Depth: _simulatedSedEdit Stripping</h3>
+            <pre class="bg-dark-800 border border-gray-700/50 rounded-lg p-4 overflow-x-auto mb-4"><code class="text-sm text-green-400">if (tool.name === BASH_TOOL_NAME &amp;&amp; '_simulatedSedEdit' in processedInput) {
+  const { _simulatedSedEdit: _, ...rest } = processedInput
+  processedInput = rest  // field stripped, execution proceeds safely
+}</code></pre>
+            <p class="dark:text-gray-300 text-sm">Medida de defense-in-depth mesmo que o Zod <code class="bg-dark-800 px-1 rounded text-xs">strictObject</code> ja devesse rejeitar o campo.</p>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3 mt-4">Input Mutation Safety</h3>
+            <div class="tip-box bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                <div class="text-amber-400 font-bold text-sm mb-2">TRES COPIAS DE INPUT</div>
+                <p class="dark:text-gray-300 text-sm">O codigo mantem tres copias distintas: (1) o original API-bound (para cache), (2) o clone observable backfilled (para hooks/canUseTool), (3) o input potencialmente atualizado por hooks para call. Cada fronteira e intencional -- mutar o original alteraria o transcript serializado e quebraria hashes de fixtures VCR em testes.</p>
+            </div>
+        </section>
+
+        <!-- Section 8: Permission Context -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">8</span>
+                <h2 class="text-xl font-bold dark:text-white">The Permission Context</h2>
+            </div>
+            <p class="dark:text-gray-300 mb-4">O <code class="bg-dark-800 px-1 rounded text-sm">ToolPermissionContext</code> (wrapped em <code class="bg-dark-800 px-1 rounded text-sm">DeepImmutable</code>) flui por todo o sistema. Controla tanto filtragem no registro quanto permission checks em runtime.</p>
+
+            <pre class="bg-dark-800 border border-gray-700/50 rounded-lg p-4 overflow-x-auto mb-4"><code class="text-sm text-green-400">export type ToolPermissionContext = DeepImmutable&lt;{
+  mode: PermissionMode             // 'default' | 'plan' | 'bypassPermissions'
+  additionalWorkingDirectories: Map&lt;string, AdditionalWorkingDirectory&gt;
+  alwaysAllowRules: ToolPermissionRulesBySource
+  alwaysDenyRules:  ToolPermissionRulesBySource
+  alwaysAskRules:   ToolPermissionRulesBySource
+  isBypassPermissionsModeAvailable: boolean
+  shouldAvoidPermissionPrompts?: boolean  // background agents: auto-deny
+}&gt;</code></pre>
+
+            <div class="concept-box bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                <div class="text-blue-400 font-bold text-sm mb-2">IMUTABILIDADE FUNCIONAL</div>
+                <p class="dark:text-gray-300 text-sm"><code class="bg-dark-800 px-1 rounded text-xs">DeepImmutable</code> previne qualquer code path de mutar permissoes acidentalmente in-place. A unica forma de mudar o contexto e via <code class="bg-dark-800 px-1 rounded text-xs">contextModifier</code> retornado do <code class="bg-dark-800 px-1 rounded text-xs">ToolResult</code>. Isso previne contaminacao cruzada de estado entre tools.</p>
+            </div>
+        </section>
+
+        <!-- Summary -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-blue-500/30 p-6 bg-gradient-to-b from-blue-900/20 to-transparent">
+            <h2 class="text-xl font-bold dark:text-white mb-4">&#x1F3AF; Resumo e Takeaways</h2>
+            <div class="grid gap-3">
+                <div class="flex items-start gap-3">
+                    <span class="text-blue-400 font-bold text-sm mt-0.5">1</span>
+                    <p class="dark:text-gray-300 text-sm"><strong class="text-blue-400">Protocol, not class hierarchy.</strong> Tool e um tipo estrutural TypeScript. Qualquer objeto satisfazendo a interface e uma tool. buildTool() preenche defaults fail-closed seguros.</p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-blue-400 font-bold text-sm mt-0.5">2</span>
+                    <p class="dark:text-gray-300 text-sm"><strong class="text-blue-400">Three-tier assembly.</strong> getAllBaseTools() -> getTools() -> assembleToolPool(). Feature flags gate no load, deny rules filtram antes do modelo ver, isEnabled() e o veto final.</p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-blue-400 font-bold text-sm mt-0.5">3</span>
+                    <p class="dark:text-gray-300 text-sm"><strong class="text-blue-400">Concurrency is data-driven.</strong> isConcurrencySafe(input) e chamado per-call. O orchestrator particiona em batches concorrentes/seriais em runtime.</p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-blue-400 font-bold text-sm mt-0.5">4</span>
+                    <p class="dark:text-gray-300 text-sm"><strong class="text-blue-400">Immutable context, functional mutations.</strong> ToolPermissionContext e DeepImmutable. Mudancas de estado via contextModifier functions retornadas do ToolResult.</p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-blue-400 font-bold text-sm mt-0.5">5</span>
+                    <p class="dark:text-gray-300 text-sm"><strong class="text-blue-400">Input mutation carefully controlled.</strong> Tres copias: API-bound original, observable clone backfilled, hook-updated call input. Cada fronteira e intencional.</p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-blue-400 font-bold text-sm mt-0.5">6</span>
+                    <p class="dark:text-gray-300 text-sm"><strong class="text-blue-400">Bash is special.</strong> Somente erros de Bash cascateiam para siblings. Bash inicia classifier speculatively. Bash tem _simulatedSedEdit defense-stripped.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Navigation -->
+        <div class="flex justify-between items-center pt-6">
+            <a href="../trilha2/" class="flex items-center gap-2 px-4 py-2 dark:bg-dark-800 rounded-lg border dark:border-gray-700/50 dark:text-gray-300 hover:border-blue-500/50 transition-colors text-sm">
+                <span>&#x2190;</span> Trilha 2: Index
+            </a>
+            <a href="modulo-2-2.html" class="flex items-center gap-2 px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg border border-blue-500/30 hover:bg-blue-500/30 transition-colors text-sm">
+                2.2 The Bash Tool <span>&#x2192;</span>
+            </a>
+        </div>
+    </main>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { primaryColor: '#1e293b', primaryTextColor: '#e2e8f0', lineColor: '#3b82f6' } });
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.classList.contains('dark');
+            html.classList.toggle('dark', !isDark);
+            html.classList.toggle('light', isDark);
+            localStorage.setItem('theme', isDark ? 'light' : 'dark');
+        }
+
+        (function() {
+            const saved = localStorage.getItem('theme');
+            if (saved === 'light') {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+            }
+        })();
+    </script>
+</body>
+</html>

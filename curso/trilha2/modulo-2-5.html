@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2.5 MCP Integration - Claude Code Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: { 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a' },
+                        dark: { 800: '#1e293b', 900: '#0f172a', 950: '#020617' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html.light { background: #f8fafc; color: #1e293b; }
+        html.light .dark\:bg-dark-950 { background: #f8fafc !important; }
+        html.light .dark\:bg-dark-900 { background: #ffffff !important; }
+        html.light .dark\:bg-dark-800 { background: #f1f5f9 !important; }
+        html.light .dark\:bg-dark-900\/50 { background: rgba(255,255,255,0.8) !important; }
+        html.light .dark\:bg-dark-800\/50 { background: rgba(241,245,249,0.8) !important; }
+        html.light .dark\:text-white { color: #1e293b !important; }
+        html.light .dark\:text-gray-100 { color: #334155 !important; }
+        html.light .dark\:text-gray-300 { color: #475569 !important; }
+        html.light .dark\:text-gray-400 { color: #64748b !important; }
+        html.light .dark\:text-gray-500 { color: #94a3b8 !important; }
+        html.light .dark\:border-gray-700 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-800 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-700\/50 { border-color: rgba(226,232,240,0.5) !important; }
+        html.light .text-blue-400 { color: #2563eb !important; }
+        html.light .text-blue-500 { color: #1d4ed8 !important; }
+        html.light .bg-blue-500\/10 { background: rgba(37,99,235,0.08) !important; }
+        html.light .bg-blue-500\/20 { background: rgba(37,99,235,0.12) !important; }
+        html.light .border-blue-500\/30 { border-color: rgba(37,99,235,0.2) !important; }
+        html.light .from-blue-900\/30 { --tw-gradient-from: rgba(37,99,235,0.08) !important; }
+        html.light nav { background: rgba(255,255,255,0.85) !important; border-bottom: 1px solid #e2e8f0 !important; }
+        html.light .dark\:hover\:bg-dark-800:hover { background: #e2e8f0 !important; }
+        html.light pre { background: #f1f5f9 !important; border-color: #e2e8f0 !important; }
+        html.light code { color: #1e293b !important; }
+    </style>
+</head>
+<body class="dark:bg-dark-950 dark:text-white font-sans min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-40 backdrop-blur-xl dark:bg-dark-900/50 border-b dark:border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
+            <a href="../../index.html" class="text-yellow-400 font-bold text-lg whitespace-nowrap">&#x1F4BB; Claude Code Deep Dive</a>
+            <span class="dark:text-gray-600">|</span>
+            <a href="https://inema.club" target="_blank" class="text-sky-400 text-sm font-medium hover:underline">INEMA.CLUB</a>
+            <div class="flex items-center gap-1 ml-auto flex-wrap">
+                <a href="../trilha1/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Core Architecture</span><span class="md:hidden">T1</span></a>
+                <a href="../trilha2/" class="px-2 py-1 text-xs font-bold rounded bg-blue-500/20 text-blue-400 border border-blue-500/30"><span class="hidden md:inline">Tool System</span><span class="md:hidden">T2</span></a>
+                <a href="../trilha3/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Agent Intelligence</span><span class="md:hidden">T3</span></a>
+                <a href="../trilha4/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Interface</span><span class="md:hidden">T4</span></a>
+                <a href="../trilha5/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Infrastructure</span><span class="md:hidden">T5</span></a>
+                <a href="../trilha6/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Connectivity</span><span class="md:hidden">T6</span></a>
+                <a href="../trilha7/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Unreleased Features</span><span class="md:hidden">T7</span></a>
+                <a href="../trilha8/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Big Picture</span><span class="md:hidden">T8</span></a>
+                <button onclick="toggleTheme()" class="ml-2 p-2 rounded-lg dark:hover:bg-dark-800 dark:text-gray-400" title="Alternar tema">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <div class="max-w-5xl mx-auto px-4 pt-4">
+        <div class="flex items-center gap-2 text-sm dark:text-gray-400">
+            <a href="../trilha2/" class="hover:text-blue-400 transition-colors">Trilha 2</a>
+            <span>&#x203A;</span>
+            <span class="text-blue-400">2.5 MCP Integration</span>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-gradient-to-b from-blue-900/30 to-transparent py-12 px-4">
+        <div class="max-w-5xl mx-auto">
+            <span class="inline-block px-3 py-1 text-xs font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 rounded-full border border-blue-500/30 mb-4">MODULO 2.5</span>
+            <h1 class="text-3xl md:text-4xl font-extrabold mb-3">&#x1F50C; MCP Integration</h1>
+            <p class="text-lg dark:text-gray-300 max-w-3xl mb-6">Model Context Protocol: 8 transports, 7-layer config cascade, OAuth com PKCE, tool proxying, elicitation e deduplication baseada em conteudo.</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-xl">
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-xl font-bold text-blue-400">~55</div>
+                    <div class="text-xs dark:text-gray-400">Minutos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-xl font-bold text-blue-400">8</div>
+                    <div class="text-xs dark:text-gray-400">Transports</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-xl font-bold text-blue-400">7</div>
+                    <div class="text-xs dark:text-gray-400">Config Layers</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-xl font-bold text-blue-400">Avancado</div>
+                    <div class="text-xs dark:text-gray-400">Nivel</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 pb-20 space-y-10">
+
+        <!-- Section 1: What MCP Is -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">1</span>
+                <h2 class="text-xl font-bold dark:text-white">What MCP Is in Claude Code</h2>
+            </div>
+            <p class="dark:text-gray-300 mb-4">MCP (Model Context Protocol) fornece tools externas e data sources para modelos de IA. No Claude Code, cada MCP server prove tools registradas via a interface standard <code class="bg-dark-800 px-1 rounded text-sm">Tool</code>, namespaced como <code class="bg-dark-800 px-1 rounded text-sm">mcp__&lt;server&gt;__&lt;tool&gt;</code>.</p>
+
+            <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                <div class="text-blue-400 font-bold text-sm mb-2">4 CAMADAS DE ARQUITETURA</div>
+                <ul class="dark:text-gray-300 text-sm space-y-1">
+                    <li><code class="bg-dark-800 px-1 rounded text-xs">services/mcp/</code> -- Connection lifecycle, config loading, OAuth, transport setup</li>
+                    <li><code class="bg-dark-800 px-1 rounded text-xs">tools/MCPTool/</code> -- Proxy tool wrapping remote MCP calls with runtime overrides</li>
+                    <li><code class="bg-dark-800 px-1 rounded text-xs">commands/mcp/</code> -- User-facing /mcp slash command interface</li>
+                    <li><code class="bg-dark-800 px-1 rounded text-xs">components/mcp/</code> -- React UI panels for settings and dialogs</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Section 2: Transport Types -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">2</span>
+                <h2 class="text-xl font-bold dark:text-white">Transport Types</h2>
+            </div>
+            <p class="dark:text-gray-300 mb-4">Oito tipos de transport, cada um com requisitos de setup distintos:</p>
+
+            <!-- Mermaid Diagram -->
+            <div class="my-6">
+                <div class="mermaid text-sm">
+graph LR
+    A["Claude Code CLI"] --> B{"Transport Type"}
+    B -->|stdio| C["StdioClientTransport\nSubprocess spawn"]
+    B -->|sse| D["SSEClientTransport\nPersistent EventSource\n+ OAuth"]
+    B -->|http| E["StreamableHTTPClientTransport\nJSON + SSE on POST\n+ OAuth"]
+    B -->|ws| F["WebSocketTransport\nws module or Bun WS"]
+    B -->|sse-ide| G["SSE for IDE\nNo auth"]
+    B -->|ws-ide| H["WS for IDE\nOptional token"]
+    B -->|sdk| I["SdkControlTransport\nIn-process control"]
+    B -->|in-process| J["InProcessTransport\nLinked pair\nChrome / ComputerUse"]
+    style C fill:#1e293b,stroke:#3b82f6,color:#e2e8f0
+    style D fill:#1e293b,stroke:#10b981,color:#e2e8f0
+    style E fill:#1e293b,stroke:#10b981,color:#e2e8f0
+    style F fill:#1e293b,stroke:#f59e0b,color:#e2e8f0
+    style G fill:#1e293b,stroke:#ef4444,color:#e2e8f0
+    style H fill:#1e293b,stroke:#ef4444,color:#e2e8f0
+    style I fill:#1e293b,stroke:#8b5cf6,color:#e2e8f0
+    style J fill:#1e293b,stroke:#8b5cf6,color:#e2e8f0
+                </div>
+            </div>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">InProcessTransport</h3>
+            <pre class="bg-dark-800 border border-gray-700/50 rounded-lg p-4 overflow-x-auto mb-4"><code class="text-sm text-green-400">class InProcessTransport implements Transport {
+  private peer: InProcessTransport | undefined
+
+  async send(message: JSONRPCMessage): Promise&lt;void&gt; {
+    queueMicrotask(() =&gt; { this.peer?.onmessage?.(message) })
+  }
+}
+
+export function createLinkedTransportPair(): [Transport, Transport] {
+  const a = new InProcessTransport()
+  const b = new InProcessTransport()
+  a._setPeer(b); b._setPeer(a)
+  return [a, b]
+}</code></pre>
+            <p class="dark:text-gray-300 text-sm">Usa <code class="bg-dark-800 px-1 rounded text-xs">queueMicrotask</code> para entregar mensagens, evitando stack overflows em chamadas recursivas.</p>
+        </section>
+
+        <!-- Section 3: Config Scope Cascade -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">3</span>
+                <h2 class="text-xl font-bold dark:text-white">7-Layer Config Scope Cascade</h2>
+            </div>
+
+            <div class="overflow-x-auto mb-4">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b dark:border-gray-700">
+                            <th class="text-left p-2 text-blue-400">Priority</th>
+                            <th class="text-left p-2 text-blue-400">Scope</th>
+                            <th class="text-left p-2 text-blue-400">Source</th>
+                            <th class="text-left p-2 text-blue-400">Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody class="dark:text-gray-300">
+                        <tr class="border-b dark:border-gray-800"><td class="p-2 text-red-400 font-bold">1</td><td class="p-2">enterprise</td><td class="p-2">managed-mcp.json (MDM)</td><td class="p-2">Blocks all user add/remove</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">2</td><td class="p-2">dynamic</td><td class="p-2">--mcp-config flag</td><td class="p-2">Policy-filtered</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">3</td><td class="p-2">claudeai</td><td class="p-2">Claude.ai connector API</td><td class="p-2">Deduplicated by URL sig</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">4</td><td class="p-2">project</td><td class="p-2">.mcp.json (CWD &amp; parents)</td><td class="p-2">Child overrides parent</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">5</td><td class="p-2">local</td><td class="p-2">~/.claude/projects/&lt;hash&gt;/</td><td class="p-2">Not git-tracked</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">6</td><td class="p-2">user</td><td class="p-2">~/.claude/settings.json</td><td class="p-2">User-wide defaults</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">7</td><td class="p-2">managed</td><td class="p-2">Plugin-provided servers</td><td class="p-2">Namespaced plugin:name:server</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-4">
+                <div class="text-red-400 font-bold text-sm mb-2">ENTERPRISE LOCK</div>
+                <p class="dark:text-gray-300 text-sm">Quando <code class="bg-dark-800 px-1 rounded text-xs">managed-mcp.json</code> existe, <code class="bg-dark-800 px-1 rounded text-xs">addMcpConfig()</code> throws: "enterprise MCP configuration is active and has exclusive control." Tools como <code class="bg-dark-800 px-1 rounded text-xs">claude mcp add</code> sao completamente bloqueadas.</p>
+            </div>
+
+            <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                <div class="text-amber-400 font-bold text-sm mb-2">POLICY ALLOW/DENY LISTS</div>
+                <p class="dark:text-gray-300 text-sm">Enterprise policy pode definir <code class="bg-dark-800 px-1 rounded text-xs">allowedMcpServers</code> e <code class="bg-dark-800 px-1 rounded text-xs">deniedMcpServers</code>. Denylist tem precedencia absoluta. Matching por name (exact), command (full array para stdio), ou URL pattern (glob com *).</p>
+            </div>
+        </section>
+
+        <!-- Section 4: Connection Lifecycle -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">4</span>
+                <h2 class="text-xl font-bold dark:text-white">Connection Lifecycle e State Machine</h2>
+            </div>
+
+            <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 mb-4">
+                <div class="text-emerald-400 font-bold text-sm mb-2">8 ETAPAS DO LIFECYCLE</div>
+                <ol class="dark:text-gray-300 text-sm space-y-1 list-decimal list-inside">
+                    <li><strong>Config Assembly</strong> -- All scopes merged e policy-filtered. Env vars expanded.</li>
+                    <li><strong>Batched Connection</strong> -- Stdio: batches de 3. Remote: batches de 20.</li>
+                    <li><strong>Transport Construction</strong> -- Based on serverRef.type, correct SDK transport.</li>
+                    <li><strong>client.connect() with Timeout</strong> -- Default 30s. Races connect vs timeout.</li>
+                    <li><strong>Auth Handling</strong> -- 401 -> needs-auth state. McpAuthTool pseudo-tool injected.</li>
+                    <li><strong>Capability Negotiation</strong> -- roots:{} e elicitation:{} capabilities. Server instructions truncated to 2048 chars.</li>
+                    <li><strong>Tool/Resource/Prompt Fetch</strong> -- Fetched in parallel. Names normalized.</li>
+                    <li><strong>Live Notifications</strong> -- ToolListChanged subscriptions. Exponential backoff reconnect (1s -> 30s cap).</li>
+                </ol>
+            </div>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">Timeout Race Pattern</h3>
+            <pre class="bg-dark-800 border border-gray-700/50 rounded-lg p-4 overflow-x-auto"><code class="text-sm text-green-400">const connectPromise = client.connect(transport)
+const timeoutPromise = new Promise&lt;never&gt;((_, reject) =&gt; {
+  const id = setTimeout(() =&gt; {
+    transport.close().catch(() =&gt; {})
+    reject(new Error(`MCP server "${name}" timed out after ${timeout}ms`))
+  }, getConnectionTimeoutMs())
+  connectPromise.then(() =&gt; clearTimeout(id), () =&gt; clearTimeout(id))
+})
+
+await Promise.race([connectPromise, timeoutPromise])</code></pre>
+        </section>
+
+        <!-- Section 5: Tool Proxying -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">5</span>
+                <h2 class="text-xl font-bold dark:text-white">Tool Proxying e MCPTool</h2>
+            </div>
+            <p class="dark:text-gray-300 mb-4"><code class="bg-dark-800 px-1 rounded text-sm">MCPTool</code> e um template. Para cada tool de cada server conectado, <code class="bg-dark-800 px-1 rounded text-sm">fetchToolsForClient()</code> clona com metadata real overridden.</p>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">Name Normalization</h3>
+            <pre class="bg-dark-800 border border-gray-700/50 rounded-lg p-4 overflow-x-auto mb-4"><code class="text-sm text-green-400">export function normalizeNameForMCP(name: string): string {
+  let normalized = name.replace(/[^a-zA-Z0-9_-]/g, '_')
+  if (name.startsWith('claude.ai ')) {
+    normalized = normalized.replace(/_+/g, '_').replace(/^_|_$/g, '')
+  }
+  return normalized
+}
+
+export function buildMcpToolName(server: string, tool: string): string {
+  return `mcp__${normalizeNameForMCP(server)}__${normalizeNameForMCP(tool)}`
+}</code></pre>
+
+            <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mb-4">
+                <div class="text-amber-400 font-bold text-sm mb-2">DESCRIPTION CAP: 2048 CHARS</div>
+                <p class="dark:text-gray-300 text-sm">OpenAPI-generated servers despejam 15-60 KB de docs em tool.description. Claude Code hard-caps tanto tool descriptions quanto server instructions em <strong class="text-blue-400">2048 characters</strong> para gerenciar context window.</p>
+            </div>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">Result Handling</h3>
+            <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4">
+                <div class="text-emerald-400 font-bold text-sm mb-2">TRES TIPOS DE RESULTADO</div>
+                <ul class="dark:text-gray-300 text-sm space-y-1">
+                    <li><strong>Image content:</strong> resized/downsampled, retornado como base64</li>
+                    <li><strong>Binary blobs:</strong> persistidos em disco, path retornado como texto</li>
+                    <li><strong>Resultado &gt; 100 KB:</strong> truncado com instrucoes</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Section 6: OAuth Authentication -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">6</span>
+                <h2 class="text-xl font-bold dark:text-white">OAuth Authentication e McpAuthTool</h2>
+            </div>
+            <p class="dark:text-gray-300 mb-4">MCP servers usando SSE ou HTTP transport podem requerer OAuth. O sistema implementa fluxo PKCE completo com XAA (Cross-App Access) extension support.</p>
+
+            <!-- OAuth Sequence Diagram -->
+            <div class="my-6">
+                <div class="mermaid text-sm">
+sequenceDiagram
+    participant C as Claude Code
+    participant KS as Keychain
+    participant AS as Auth Server
+    participant MCP as MCP Server
+    C->>C: client.connect() -> 401
+    C->>C: set state: needs-auth
+    C->>C: inject McpAuthTool
+    Note over C: Model calls authenticate
+    C->>AS: discoverOAuthServerMetadata()
+    AS-->>C: PKCE endpoint
+    C->>AS: /authorize?code_challenge=...
+    C-->>C: open browser
+    AS-->>C: callback with auth_code
+    C->>AS: POST /token (code + verifier)
+    AS-->>C: access_token + refresh_token
+    C->>KS: store tokens
+    C->>MCP: reconnect
+    MCP-->>C: connected - real tools swap in
+                </div>
+            </div>
+
+            <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-4">
+                <div class="text-blue-400 font-bold text-sm mb-2">McpAuthTool: MODEL-TRIGGERED AUTH</div>
+                <p class="dark:text-gray-300 text-sm">Quando server entra em <code class="bg-dark-800 px-1 rounded text-xs">needs-auth</code> state, pseudo-tool <code class="bg-dark-800 px-1 rounded text-xs">mcp__&lt;server&gt;__authenticate</code> e injetada. Modelo chama para iniciar OAuth e receber URL de autorizacao. Apos callback, real tools substituem automaticamente via prefix-based replacement no AppState.</p>
+            </div>
+
+            <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                <div class="text-amber-400 font-bold text-sm mb-2">SLACK 200-ERROR QUIRK</div>
+                <p class="dark:text-gray-300 text-sm">RFC 6749 <code class="bg-dark-800 px-1 rounded text-xs">invalid_grant</code> error triggera token invalidation. Slack retorna HTTP 200 com <code class="bg-dark-800 px-1 rounded text-xs">{"error":"invalid_refresh_token"}</code>. Claude Code normaliza esses codigos non-standard para <code class="bg-dark-800 px-1 rounded text-xs">invalid_grant</code> reescrevendo para synthetic 400 antes de passar ao SDK.</p>
+            </div>
+        </section>
+
+        <!-- Section 7: Elicitation -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">7</span>
+                <h2 class="text-xl font-bold dark:text-white">Elicitation e Deduplication</h2>
+            </div>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">Elicitation: Dois Modos</h3>
+            <div class="grid md:grid-cols-2 gap-4 mb-4">
+                <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                    <div class="text-blue-400 font-bold text-sm mb-2">FORM MODE</div>
+                    <p class="dark:text-gray-300 text-xs">Server envia JSON Schema; user preenche form. Response: accept com content, decline ou cancel.</p>
+                </div>
+                <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4">
+                    <div class="text-emerald-400 font-bold text-sm mb-2">URL MODE</div>
+                    <p class="dark:text-gray-300 text-xs">Server envia URL (OAuth step-up, confirmacao externa). Two-phase: open URL -> wait for ElicitationComplete notification.</p>
+                </div>
+            </div>
+
+            <pre class="bg-dark-800 border border-gray-700/50 rounded-lg p-4 overflow-x-auto mb-4"><code class="text-sm text-green-400">client.setRequestHandler(ElicitRequestSchema, async (request, extra) =&gt; {
+  // 1. Try hooks first (programmatic response)
+  const hookResponse = await runElicitationHooks(serverName, request.params, extra.signal)
+  if (hookResponse) return hookResponse
+
+  // 2. Queue for user interaction
+  const response = new Promise&lt;ElicitResult&gt;(resolve =&gt; {
+    setAppState(prev =&gt; ({
+      ...prev,
+      elicitation: {
+        queue: [...prev.elicitation.queue, {
+          serverName, requestId: extra.requestId,
+          params: request.params,
+          respond: resolve,
+        }],
+      },
+    }))
+  })
+  return await response
+})</code></pre>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">Server Deduplication</h3>
+            <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4">
+                <div class="text-emerald-400 font-bold text-sm mb-2">CONTENT-BASED, NAO NAME-BASED</div>
+                <ul class="dark:text-gray-300 text-sm space-y-1">
+                    <li><strong>Stdio signature:</strong> <code class="bg-dark-800 px-1 rounded text-xs">stdio:["cmd","arg1"]</code></li>
+                    <li><strong>Remote signature:</strong> <code class="bg-dark-800 px-1 rounded text-xs">url:https://vendor.example.com/mcp</code></li>
+                    <li><strong>CCR Proxy:</strong> URLs rewritten through proxy preservam original via <code class="bg-dark-800 px-1 rounded text-xs">mcp_url</code> query param</li>
+                    <li><strong>Manual wins over plugin</strong> -- user-configured beats plugin-provided</li>
+                    <li><strong>First plugin wins</strong> -- se dois plugins proveem mesmo server</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Section 8: XAA -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">8</span>
+                <h2 class="text-xl font-bold dark:text-white">XAA -- Cross-App Access</h2>
+            </div>
+            <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                <div class="text-blue-400 font-bold text-sm mb-2">ENTERPRISE SSO EXTENSION</div>
+                <p class="dark:text-gray-300 text-sm">Quando <code class="bg-dark-800 px-1 rounded text-xs">xaa: true</code> setado na config do MCP server, o sistema troca IdP ID-token por OAuth token do MCP server silenciosamente ao inves de abrir browser. Configurado uma vez em <code class="bg-dark-800 px-1 rounded text-xs">settings.xaaIdp</code>, compartilhado entre todos os servers XAA-enabled.</p>
+            </div>
+        </section>
+
+        <!-- Summary -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-blue-500/30 p-6 bg-gradient-to-b from-blue-900/20 to-transparent">
+            <h2 class="text-xl font-bold dark:text-white mb-4">&#x1F3AF; Resumo e Takeaways</h2>
+            <div class="grid gap-3">
+                <div class="flex items-start gap-3">
+                    <span class="text-blue-400 font-bold text-sm mt-0.5">1</span>
+                    <p class="dark:text-gray-300 text-sm"><strong class="text-blue-400">8 transport types</strong> -- stdio, sse, http, ws, sse-ide, ws-ide, sdk, in-process. Public transports support OAuth; IDE variants auth-free ou token-based.</p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-blue-400 font-bold text-sm mt-0.5">2</span>
+                    <p class="dark:text-gray-300 text-sm"><strong class="text-blue-400">7-layer scope cascade</strong> -- enterprise > dynamic > claudeai > project > local > user > managed. Enterprise lock bloqueia add/remove manual.</p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-blue-400 font-bold text-sm mt-0.5">3</span>
+                    <p class="dark:text-gray-300 text-sm"><strong class="text-blue-400">Config files walk directory tree</strong> -- .mcp.json read de cada parent directory ate root; child overrides parent.</p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-blue-400 font-bold text-sm mt-0.5">4</span>
+                    <p class="dark:text-gray-300 text-sm"><strong class="text-blue-400">OAuth model-triggerable</strong> -- McpAuthTool pseudo-tool permite Claude iniciar auth autonomamente. Real tools auto-replace apos callback.</p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-blue-400 font-bold text-sm mt-0.5">5</span>
+                    <p class="dark:text-gray-300 text-sm"><strong class="text-blue-400">Tool descriptions hard-capped 2048 chars</strong> -- previne context explosion de OpenAPI servers.</p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-blue-400 font-bold text-sm mt-0.5">6</span>
+                    <p class="dark:text-gray-300 text-sm"><strong class="text-blue-400">Deduplication content-based</strong> -- same command array ou URL = same server independente de nomes em fontes diferentes.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Navigation -->
+        <div class="flex justify-between items-center pt-6">
+            <a href="modulo-2-4.html" class="flex items-center gap-2 px-4 py-2 dark:bg-dark-800 rounded-lg border dark:border-gray-700/50 dark:text-gray-300 hover:border-blue-500/50 transition-colors text-sm">
+                <span>&#x2190;</span> 2.4 Search Tools
+            </a>
+            <a href="../trilha2/" class="flex items-center gap-2 px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg border border-blue-500/30 hover:bg-blue-500/30 transition-colors text-sm">
+                Trilha 2: Index <span>&#x2192;</span>
+            </a>
+        </div>
+    </main>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { primaryColor: '#1e293b', primaryTextColor: '#e2e8f0', lineColor: '#3b82f6' } });
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.classList.contains('dark');
+            html.classList.toggle('dark', !isDark);
+            html.classList.toggle('light', isDark);
+            localStorage.setItem('theme', isDark ? 'light' : 'dark');
+        }
+
+        (function() {
+            const saved = localStorage.getItem('theme');
+            if (saved === 'light') {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+            }
+        })();
+    </script>
+</body>
+</html>

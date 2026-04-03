@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2.3 File Tools - Claude Code Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: { 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a' },
+                        dark: { 800: '#1e293b', 900: '#0f172a', 950: '#020617' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html.light { background: #f8fafc; color: #1e293b; }
+        html.light .dark\:bg-dark-950 { background: #f8fafc !important; }
+        html.light .dark\:bg-dark-900 { background: #ffffff !important; }
+        html.light .dark\:bg-dark-800 { background: #f1f5f9 !important; }
+        html.light .dark\:bg-dark-900\/50 { background: rgba(255,255,255,0.8) !important; }
+        html.light .dark\:bg-dark-800\/50 { background: rgba(241,245,249,0.8) !important; }
+        html.light .dark\:text-white { color: #1e293b !important; }
+        html.light .dark\:text-gray-100 { color: #334155 !important; }
+        html.light .dark\:text-gray-300 { color: #475569 !important; }
+        html.light .dark\:text-gray-400 { color: #64748b !important; }
+        html.light .dark\:text-gray-500 { color: #94a3b8 !important; }
+        html.light .dark\:border-gray-700 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-800 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-700\/50 { border-color: rgba(226,232,240,0.5) !important; }
+        html.light .text-blue-400 { color: #2563eb !important; }
+        html.light .text-blue-500 { color: #1d4ed8 !important; }
+        html.light .bg-blue-500\/10 { background: rgba(37,99,235,0.08) !important; }
+        html.light .bg-blue-500\/20 { background: rgba(37,99,235,0.12) !important; }
+        html.light .border-blue-500\/30 { border-color: rgba(37,99,235,0.2) !important; }
+        html.light .from-blue-900\/30 { --tw-gradient-from: rgba(37,99,235,0.08) !important; }
+        html.light nav { background: rgba(255,255,255,0.85) !important; border-bottom: 1px solid #e2e8f0 !important; }
+        html.light .dark\:hover\:bg-dark-800:hover { background: #e2e8f0 !important; }
+        html.light pre { background: #f1f5f9 !important; border-color: #e2e8f0 !important; }
+        html.light code { color: #1e293b !important; }
+    </style>
+</head>
+<body class="dark:bg-dark-950 dark:text-white font-sans min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-40 backdrop-blur-xl dark:bg-dark-900/50 border-b dark:border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
+            <a href="../../index.html" class="text-yellow-400 font-bold text-lg whitespace-nowrap">&#x1F4BB; Claude Code Deep Dive</a>
+            <span class="dark:text-gray-600">|</span>
+            <a href="https://inema.club" target="_blank" class="text-sky-400 text-sm font-medium hover:underline">INEMA.CLUB</a>
+            <div class="flex items-center gap-1 ml-auto flex-wrap">
+                <a href="../trilha1/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Core Architecture</span><span class="md:hidden">T1</span></a>
+                <a href="../trilha2/" class="px-2 py-1 text-xs font-bold rounded bg-blue-500/20 text-blue-400 border border-blue-500/30"><span class="hidden md:inline">Tool System</span><span class="md:hidden">T2</span></a>
+                <a href="../trilha3/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Agent Intelligence</span><span class="md:hidden">T3</span></a>
+                <a href="../trilha4/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Interface</span><span class="md:hidden">T4</span></a>
+                <a href="../trilha5/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Infrastructure</span><span class="md:hidden">T5</span></a>
+                <a href="../trilha6/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Connectivity</span><span class="md:hidden">T6</span></a>
+                <a href="../trilha7/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Unreleased Features</span><span class="md:hidden">T7</span></a>
+                <a href="../trilha8/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Big Picture</span><span class="md:hidden">T8</span></a>
+                <button onclick="toggleTheme()" class="ml-2 p-2 rounded-lg dark:hover:bg-dark-800 dark:text-gray-400" title="Alternar tema">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <div class="max-w-5xl mx-auto px-4 pt-4">
+        <div class="flex items-center gap-2 text-sm dark:text-gray-400">
+            <a href="../trilha2/" class="hover:text-blue-400 transition-colors">Trilha 2</a>
+            <span>&#x203A;</span>
+            <span class="text-blue-400">2.3 File Tools</span>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-gradient-to-b from-blue-900/30 to-transparent py-12 px-4">
+        <div class="max-w-5xl mx-auto">
+            <span class="inline-block px-3 py-1 text-xs font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 rounded-full border border-blue-500/30 mb-4">MODULO 2.3</span>
+            <h1 class="text-3xl md:text-4xl font-extrabold mb-3">&#x1F4C4; File Tools: Read, Write, Edit</h1>
+            <p class="text-lg dark:text-gray-300 max-w-3xl mb-6">Tres ferramentas de manipulacao de arquivo com um invariante compartilhado: toda escrita requer leitura previa. Dedup, quote normalization e staleness checks.</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-xl">
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-xl font-bold text-blue-400">~50</div>
+                    <div class="text-xs dark:text-gray-400">Minutos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-xl font-bold text-blue-400">3</div>
+                    <div class="text-xs dark:text-gray-400">Tools</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-xl font-bold text-blue-400">18%</div>
+                    <div class="text-xs dark:text-gray-400">Dedup Hit Rate</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-xl font-bold text-blue-400">25K</div>
+                    <div class="text-xs dark:text-gray-400">Token Cap</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 pb-20 space-y-10">
+
+        <!-- Section 1: Three Tools Overview -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">1</span>
+                <h2 class="text-xl font-bold dark:text-white">Three Tools, One Contract</h2>
+            </div>
+            <p class="dark:text-gray-300 mb-4">Claude Code prove tres primitivas de manipulacao de arquivo compartilhando um invariante: <strong class="text-blue-400">toda operacao de escrita requer uma leitura previa do arquivo-alvo</strong>.</p>
+
+            <div class="overflow-x-auto mb-4">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b dark:border-gray-700">
+                            <th class="text-left p-2 text-blue-400">Capability</th>
+                            <th class="text-center p-2 text-blue-400">Read</th>
+                            <th class="text-center p-2 text-blue-400">Write</th>
+                            <th class="text-center p-2 text-blue-400">Edit</th>
+                        </tr>
+                    </thead>
+                    <tbody class="dark:text-gray-300">
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">Read-only / concurrency-safe</td><td class="p-2 text-center text-emerald-400">Yes</td><td class="p-2 text-center text-red-400">No</td><td class="p-2 text-center text-red-400">No</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">Requires prior Read</td><td class="p-2 text-center">--</td><td class="p-2 text-center text-amber-400">Yes</td><td class="p-2 text-center text-amber-400">Yes</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">Handles images natively</td><td class="p-2 text-center text-emerald-400">Yes</td><td class="p-2 text-center text-red-400">No</td><td class="p-2 text-center text-red-400">No</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">Handles PDFs</td><td class="p-2 text-center text-emerald-400">If supported</td><td class="p-2 text-center text-red-400">No</td><td class="p-2 text-center text-red-400">No</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">Quote normalization</td><td class="p-2 text-center">--</td><td class="p-2 text-center">--</td><td class="p-2 text-center text-emerald-400">Yes</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">Dedup (skip unchanged)</td><td class="p-2 text-center text-emerald-400">Yes</td><td class="p-2 text-center">--</td><td class="p-2 text-center">--</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">Token limit enforced</td><td class="p-2 text-center">25K default</td><td class="p-2 text-center">--</td><td class="p-2 text-center">--</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="p-2">LSP notifications</td><td class="p-2 text-center text-red-400">No</td><td class="p-2 text-center text-emerald-400">Yes</td><td class="p-2 text-center text-emerald-400">Yes</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Section 2: Read Tool -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">2</span>
+                <h2 class="text-xl font-bold dark:text-white">Read Tool Deep-Dive</h2>
+            </div>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">Pagination: offset + limit</h3>
+            <p class="dark:text-gray-300 mb-3 text-sm">Por default Read retorna ate 2000 linhas a partir da linha 1. Para arquivos grandes, use <code class="bg-dark-800 px-1 rounded text-xs">offset</code> (1-based) e <code class="bg-dark-800 px-1 rounded text-xs">limit</code>.</p>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">Token Limit Enforcement</h3>
+            <p class="dark:text-gray-300 mb-3 text-sm">Gate de dois estagios: primeiro uma estimativa rapida (sem API call). Se exceder 1/4 do cap, contagem exata via API. Se exceder <code class="bg-dark-800 px-1 rounded text-xs">maxTokens</code> (default 25K), <code class="bg-dark-800 px-1 rounded text-xs">MaxFileReadTokenExceededError</code> e thrown antes do conteudo ser enviado.</p>
+
+            <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mb-4">
+                <div class="text-amber-400 font-bold text-sm mb-2">THROW, NAO TRUNCATE</div>
+                <p class="dark:text-gray-300 text-sm">Uma abordagem de truncation foi testada e revertida. Truncation produzia ~25K tokens enquanto o throw produz ~100 bytes de erro, reduzindo dramaticamente contexto desperdicado.</p>
+            </div>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">Dedup: Como Read Evita Re-envio</h3>
+            <pre class="bg-dark-800 border border-gray-700/50 rounded-lg p-4 overflow-x-auto mb-4"><code class="text-sm text-green-400">readFileState.set(fullFilePath, {
+  content,
+  timestamp: getFileModificationTime(fullFilePath),
+  offset,  // undefined means "full read"
+  limit,
+})</code></pre>
+            <p class="dark:text-gray-300 text-sm mb-3">No proximo Read do mesmo arquivo e range, a tool checa mtime no disco. Se igual, retorna stub leve em vez de re-enviar conteudo.</p>
+
+            <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 mb-4">
+                <div class="text-emerald-400 font-bold text-sm mb-2">DADOS: ~18% DE READS SAO RE-READS</div>
+                <p class="dark:text-gray-300 text-sm">Duas copias completas por turno desperdicam <code class="bg-dark-800 px-1 rounded text-xs">cache_creation</code> tokens em cada turno subsequente. O dedup path produz ~100-byte stub vs ate 25K tokens de conteudo. GrowthBook killswitch <code class="bg-dark-800 px-1 rounded text-xs">tengu_read_dedup_killswitch</code> pode desabilitar.</p>
+            </div>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">Image, PDF e Notebook Support</h3>
+            <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                <div class="text-blue-400 font-bold text-sm mb-2">FORMATOS SUPORTADOS</div>
+                <ul class="dark:text-gray-300 text-sm space-y-1">
+                    <li><strong>Images:</strong> PNG, JPG, JPEG, GIF, WebP -- resize via sharp, retornados como base64 block multimodal</li>
+                    <li><strong>PDFs:</strong> pages parameter aceita ranges como "1-5". Hard cap de 20 pages por call</li>
+                    <li><strong>Notebooks:</strong> .ipynb via mapNotebookCellsToToolResult() -- modelo ve visao unificada</li>
+                    <li><strong>macOS:</strong> Screenshot filenames com thin space (U+202F) detectados e retried automaticamente</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Section 3: Write Tool -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">3</span>
+                <h2 class="text-xl font-bold dark:text-white">Write Tool Deep-Dive</h2>
+            </div>
+            <p class="dark:text-gray-300 mb-4">Write e full-content replacement. Cria novo arquivo ou sobrescreve existente inteiramente.</p>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">Read-Before-Write Gate</h3>
+            <div class="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-4">
+                <div class="text-red-400 font-bold text-sm mb-2">TRES FAILURE MODES</div>
+                <ul class="dark:text-gray-300 text-sm space-y-1">
+                    <li><strong>errorCode 2:</strong> No read in session -- "File has not been read yet."</li>
+                    <li><strong>errorCode 2:</strong> Read was partial (offset/limit) -- recusa para prevenir overwrite de conteudo nao visto</li>
+                    <li><strong>errorCode 3:</strong> File modified after read -- "Read it again before attempting to write."</li>
+                </ul>
+            </div>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">Atomic Write Sequence</h3>
+            <pre class="bg-dark-800 border border-gray-700/50 rounded-lg p-4 overflow-x-auto mb-4"><code class="text-sm text-green-400">// 1. mkdir (async, before critical section)
+await fs.mkdir(dir)
+
+// 2. Backup for file history (async, keyed on content hash)
+await fileHistoryTrackEdit(...)
+
+// 3. Sync read + staleness check (critical section starts)
+meta = readFileSyncWithMetadata(fullFilePath)
+if (lastWriteTime &gt; lastRead.timestamp) throw FILE_UNEXPECTEDLY_MODIFIED_ERROR
+
+// 4. Write to disk (critical section ends)
+writeTextContent(fullFilePath, content, enc, 'LF')</code></pre>
+
+            <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                <div class="text-amber-400 font-bold text-sm mb-2">LF POLICY</div>
+                <p class="dark:text-gray-300 text-sm">Write sempre persiste com LF line endings, independente do arquivo antigo. Uma abordagem anterior que preservava/inferia line endings corrompeu silenciosamente bash scripts quando sobrescrevia CRLF em Linux.</p>
+            </div>
+        </section>
+
+        <!-- Section 4: Edit Tool -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">4</span>
+                <h2 class="text-xl font-bold dark:text-white">Edit Tool e Quote Normalization</h2>
+            </div>
+            <p class="dark:text-gray-300 mb-4">Edit faz exact string replacement: encontra <code class="bg-dark-800 px-1 rounded text-sm">old_string</code> e substitui por <code class="bg-dark-800 px-1 rounded text-sm">new_string</code>. So envia o diff -- muito mais barato que Write para mudancas pequenas.</p>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">Quote Normalization</h3>
+            <p class="dark:text-gray-300 mb-3 text-sm">Claude nao pode outputtar curly (typographic) quotes -- a API sanitiza. O Edit tool resolve com processo de dois passos:</p>
+
+            <pre class="bg-dark-800 border border-gray-700/50 rounded-lg p-4 overflow-x-auto mb-4"><code class="text-sm text-green-400">// normalizeQuotes() under the hood:
+str
+  .replaceAll('\u2018', "'")  // left single curly
+  .replaceAll('\u2019', "'")  // right single curly
+  .replaceAll('\u201C', '"')  // left double curly
+  .replaceAll('\u201D', '"')  // right double curly</code></pre>
+
+            <p class="dark:text-gray-300 text-sm mb-4"><code class="bg-dark-800 px-1 rounded text-xs">findActualString()</code> normaliza ambos para straight quotes, localiza o match, e retorna a versao original curly-quote do arquivo. <code class="bg-dark-800 px-1 rounded text-xs">preserveQuoteStyle()</code> aplica o mesmo estilo curly-quote ao <code class="bg-dark-800 px-1 rounded text-xs">new_string</code>.</p>
+
+            <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-4">
+                <div class="text-blue-400 font-bold text-sm mb-2">CONTRACTION DETECTION</div>
+                <p class="dark:text-gray-300 text-sm"><code class="bg-dark-800 px-1 rounded text-xs">preserveQuoteStyle()</code> nao converte cegamente todo <code class="bg-dark-800 px-1 rounded text-xs">'</code> para curly quote. Quando single quote esta entre duas letras Unicode (don't, it's), e tratado como apostrofo e recebe right single curly quote. Usa <code class="bg-dark-800 px-1 rounded text-xs">/\p{L}/u</code> para deteccao.</p>
+            </div>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">Desanitization Table</h3>
+            <pre class="bg-dark-800 border border-gray-700/50 rounded-lg p-4 overflow-x-auto mb-4"><code class="text-sm text-green-400">'&lt;fnr&gt;'           -&gt; '&lt;function_results&gt;'
+'&lt;n&gt;'             -&gt; '&lt;name&gt;'
+'&lt;o&gt;'             -&gt; '&lt;output&gt;'
+'&lt;e&gt;'             -&gt; '&lt;error&gt;'
+'\n\nH:'          -&gt; '\n\nHuman:'
+'\n\nA:'          -&gt; '\n\nAssistant:'</code></pre>
+
+            <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                <div class="text-amber-400 font-bold text-sm mb-2">TRAILING WHITESPACE</div>
+                <p class="dark:text-gray-300 text-sm"><code class="bg-dark-800 px-1 rounded text-xs">normalizeFileEditInput()</code> strip trailing whitespace de cada linha do <code class="bg-dark-800 px-1 rounded text-xs">new_string</code>. Excecao: <code class="bg-dark-800 px-1 rounded text-xs">.md</code> e <code class="bg-dark-800 px-1 rounded text-xs">.mdx</code> sao skipped -- Markdown usa dois trailing spaces como hard line break.</p>
+            </div>
+        </section>
+
+        <!-- Section 5: Write vs Edit -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">5</span>
+                <h2 class="text-xl font-bold dark:text-white">Write vs Edit: Side-by-Side</h2>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4 mb-4">
+                <div class="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+                    <div class="text-red-400 font-bold text-sm mb-2">WRITE -- Full File</div>
+                    <pre class="bg-dark-800 rounded p-3 overflow-x-auto"><code class="text-xs text-green-400">Write({
+  file_path: "/src/config.ts",
+  content: `import { z } from 'zod'
+export const config = {
+  maxRetries: 5,   // changed
+  timeout: 3000,
+  endpoint: "https://...",
+}`
+})
+// Sends ENTIRE file. 150+ lines of tokens.</code></pre>
+                </div>
+                <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4">
+                    <div class="text-emerald-400 font-bold text-sm mb-2">EDIT -- Surgical</div>
+                    <pre class="bg-dark-800 rounded p-3 overflow-x-auto"><code class="text-xs text-green-400">Edit({
+  file_path: "/src/config.ts",
+  old_string: "maxRetries: 3,",
+  new_string: "maxRetries: 5,",
+})
+// Sends ~20 characters.
+// Costs a fraction of Write.</code></pre>
+                </div>
+            </div>
+
+            <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                <div class="text-blue-400 font-bold text-sm mb-2">QUANDO USAR WRITE</div>
+                <ul class="dark:text-gray-300 text-sm space-y-1">
+                    <li>Criando um <strong>novo arquivo do zero</strong></li>
+                    <li>Substituindo conteudo com <strong>versao estruturalmente diferente</strong> (rewrite completo)</li>
+                    <li>Mudancas tao extensas que construir unique <code class="bg-dark-800 px-1 rounded text-xs">old_string</code> requereria a maior parte do arquivo</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Section 6: Read-Before-Write Contract -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">6</span>
+                <h2 class="text-xl font-bold dark:text-white">The Read-Before-Write Contract</h2>
+            </div>
+
+            <div class="my-6">
+                <h3 class="text-sm font-bold dark:text-gray-400 uppercase tracking-wider mb-3">4 Fases do Contrato</h3>
+                <div class="mermaid text-sm">
+flowchart LR
+    A["Phase 1\nRead the file\nStore in readFileState\ncontent + timestamp"] --> B["Phase 2\nvalidateInput()\nReject if no read\npartial read or stale"]
+    B --> C["Phase 3\ncall() atomic check\nSync read + mtime\nclose race window"]
+    C --> D["Phase 4\nWrite/Edit executes\nUpdate readFileState\nnew mtime + content"]
+    style A fill:#1e293b,stroke:#3b82f6,color:#e2e8f0
+    style B fill:#1e293b,stroke:#f59e0b,color:#e2e8f0
+    style C fill:#1e293b,stroke:#ef4444,color:#e2e8f0
+    style D fill:#1e293b,stroke:#10b981,color:#e2e8f0
+                </div>
+            </div>
+
+            <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                <div class="text-amber-400 font-bold text-sm mb-2">GOTCHA COMUM</div>
+                <p class="dark:text-gray-300 text-sm">Um linter ou formatter rodando no file save pode modificar o arquivo entre Read e Write do Claude. Isso dispara o erro "file has been modified since read". Fix: re-read o arquivo apos formatting completar, ou configure o linter para nao auto-save durante a sessao do Claude.</p>
+            </div>
+        </section>
+
+        <!-- Section 7: Limits Precedence -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-bold">7</span>
+                <h2 class="text-xl font-bold dark:text-white">Limits Precedence e Blocked Paths</h2>
+            </div>
+
+            <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 mb-4">
+                <div class="text-emerald-400 font-bold text-sm mb-2">PRECEDENCIA DE LIMITES (3 NIVEIS)</div>
+                <ol class="dark:text-gray-300 text-sm space-y-1 list-decimal list-inside">
+                    <li><strong>Env var</strong> <code class="bg-dark-800 px-1 rounded text-xs">CLAUDE_CODE_FILE_READ_MAX_OUTPUT_TOKENS</code> -- user-set override, beats everything</li>
+                    <li><strong>GrowthBook flag</strong> <code class="bg-dark-800 px-1 rounded text-xs">tengu_amber_wren</code> -- per-org experiment infrastructure</li>
+                    <li><strong>Hardcoded default</strong> -- 25,000 tokens / 256 KB</li>
+                </ol>
+            </div>
+
+            <h3 class="text-lg font-semibold dark:text-white mb-3">Blocked Device Paths</h3>
+            <pre class="bg-dark-800 border border-gray-700/50 rounded-lg p-4 overflow-x-auto"><code class="text-sm text-green-400">// Infinite output -- never reach EOF
+'/dev/zero', '/dev/random', '/dev/urandom', '/dev/full'
+
+// Blocks waiting for input
+'/dev/stdin', '/dev/tty', '/dev/console'
+
+// fd aliases for stdio
+'/dev/fd/0', '/dev/fd/1', '/dev/fd/2'
+
+// Safe: /dev/null intentionally allowed</code></pre>
+        </section>
+
+        <!-- Summary -->
+        <section class="dark:bg-dark-900 rounded-2xl border dark:border-blue-500/30 p-6 bg-gradient-to-b from-blue-900/20 to-transparent">
+            <h2 class="text-xl font-bold dark:text-white mb-4">&#x1F3AF; Resumo e Takeaways</h2>
+            <div class="grid gap-3">
+                <div class="flex items-start gap-3">
+                    <span class="text-blue-400 font-bold text-sm mt-0.5">1</span>
+                    <p class="dark:text-gray-300 text-sm"><strong class="text-blue-400">Read e a unica tool read-only e concurrency-safe.</strong> Write e Edit requerem Read previa completa.</p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-blue-400 font-bold text-sm mt-0.5">2</span>
+                    <p class="dark:text-gray-300 text-sm"><strong class="text-blue-400">Dedup ~18% hit rate</strong> evita re-envio retornando ~100-byte stub quando mtime bate com timestamp cached.</p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-blue-400 font-bold text-sm mt-0.5">3</span>
+                    <p class="dark:text-gray-300 text-sm"><strong class="text-blue-400">Token cap 25K usa estimativa rapida primeiro;</strong> so faz API call para contagem exata se suspeito.</p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-blue-400 font-bold text-sm mt-0.5">4</span>
+                    <p class="dark:text-gray-300 text-sm"><strong class="text-blue-400">Edit's quote normalization</strong> lida com sanitizacao de curly quotes pela API. findActualString() busca com straight quotes mas escreve de volta curly.</p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-blue-400 font-bold text-sm mt-0.5">5</span>
+                    <p class="dark:text-gray-300 text-sm"><strong class="text-blue-400">Double staleness check</strong> em validateInput (pre-permission) e em call() (atomic, sync) fecha a race window.</p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-blue-400 font-bold text-sm mt-0.5">6</span>
+                    <p class="dark:text-gray-300 text-sm"><strong class="text-blue-400">Write truncation foi testada e revertida:</strong> throw no gate de 256KB e mais barato que enviar 25K tokens inutilizaveis.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Navigation -->
+        <div class="flex justify-between items-center pt-6">
+            <a href="modulo-2-2.html" class="flex items-center gap-2 px-4 py-2 dark:bg-dark-800 rounded-lg border dark:border-gray-700/50 dark:text-gray-300 hover:border-blue-500/50 transition-colors text-sm">
+                <span>&#x2190;</span> 2.2 Bash Tool
+            </a>
+            <a href="modulo-2-4.html" class="flex items-center gap-2 px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg border border-blue-500/30 hover:bg-blue-500/30 transition-colors text-sm">
+                2.4 Search Tools <span>&#x2192;</span>
+            </a>
+        </div>
+    </main>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { primaryColor: '#1e293b', primaryTextColor: '#e2e8f0', lineColor: '#3b82f6' } });
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.classList.contains('dark');
+            html.classList.toggle('dark', !isDark);
+            html.classList.toggle('light', isDark);
+            localStorage.setItem('theme', isDark ? 'light' : 'dark');
+        }
+
+        (function() {
+            const saved = localStorage.getItem('theme');
+            if (saved === 'light') {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+            }
+        })();
+    </script>
+</body>
+</html>
