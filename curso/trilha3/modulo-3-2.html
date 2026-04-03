@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3.2 Agent System - Claude Code Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: { 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95' },
+                        dark: { 800: '#1e293b', 900: '#0f172a', 950: '#020617' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html.light { background: #f8fafc; color: #1e293b; }
+        html.light .dark\:bg-dark-950 { background: #f8fafc !important; }
+        html.light .dark\:bg-dark-900 { background: #ffffff !important; }
+        html.light .dark\:bg-dark-800 { background: #f1f5f9 !important; }
+        html.light .dark\:bg-dark-900\/50 { background: rgba(255,255,255,0.8) !important; }
+        html.light .dark\:bg-dark-800\/50 { background: rgba(241,245,249,0.8) !important; }
+        html.light .dark\:text-white { color: #1e293b !important; }
+        html.light .dark\:text-gray-100 { color: #334155 !important; }
+        html.light .dark\:text-gray-300 { color: #475569 !important; }
+        html.light .dark\:text-gray-400 { color: #64748b !important; }
+        html.light .dark\:text-gray-500 { color: #94a3b8 !important; }
+        html.light .dark\:border-gray-700 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-800 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-700\/50 { border-color: rgba(226,232,240,0.5) !important; }
+        html.light .text-purple-400 { color: #7c3aed !important; }
+        html.light .text-purple-500 { color: #6d28d9 !important; }
+        html.light .bg-purple-500\/10 { background: rgba(124,58,237,0.08) !important; }
+        html.light .bg-purple-500\/20 { background: rgba(124,58,237,0.12) !important; }
+        html.light .border-purple-500\/30 { border-color: rgba(124,58,237,0.2) !important; }
+        html.light .from-purple-900\/30 { --tw-gradient-from: rgba(124,58,237,0.08) !important; }
+        html.light nav { background: rgba(255,255,255,0.85) !important; border-bottom: 1px solid #e2e8f0 !important; }
+        html.light .dark\:hover\:bg-dark-800:hover { background: #e2e8f0 !important; }
+        html.light pre { background: #f1f5f9 !important; border-color: #e2e8f0 !important; }
+        html.light code { color: #334155 !important; }
+        .mermaid-wrapper { display: flex; justify-content: center; overflow-x: auto; }
+    </style>
+</head>
+<body class="dark:bg-dark-950 dark:text-white font-sans min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-40 backdrop-blur-xl dark:bg-dark-900/50 border-b dark:border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
+            <a href="../../index.html" class="text-yellow-400 font-bold text-lg whitespace-nowrap">&#x1F4BB; Claude Code Deep Dive</a>
+            <span class="dark:text-gray-600">|</span>
+            <a href="https://inema.club" target="_blank" class="text-sky-400 text-sm font-medium hover:underline">INEMA.CLUB</a>
+            <div class="flex items-center gap-1 ml-auto flex-wrap">
+                <a href="../trilha1/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Core Architecture</span><span class="md:hidden">T1</span></a>
+                <a href="../trilha2/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Tool System</span><span class="md:hidden">T2</span></a>
+                <a href="../trilha3/" class="px-2 py-1 text-xs font-bold rounded bg-purple-500/20 text-purple-400 border border-purple-500/30"><span class="hidden md:inline">Agent Intelligence</span><span class="md:hidden">T3</span></a>
+                <a href="../trilha4/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Interface</span><span class="md:hidden">T4</span></a>
+                <a href="../trilha5/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Infrastructure</span><span class="md:hidden">T5</span></a>
+                <a href="../trilha6/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Connectivity</span><span class="md:hidden">T6</span></a>
+                <a href="../trilha7/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Unreleased Features</span><span class="md:hidden">T7</span></a>
+                <a href="../trilha8/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Big Picture</span><span class="md:hidden">T8</span></a>
+                <button onclick="toggleTheme()" class="ml-2 p-2 rounded-lg dark:hover:bg-dark-800 dark:text-gray-400" title="Alternar tema">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <div class="max-w-5xl mx-auto px-4 pt-6">
+        <div class="flex items-center gap-2 text-sm dark:text-gray-400">
+            <a href="../trilha3/" class="hover:text-purple-400 transition-colors">Trilha 3</a>
+            <span>&#xBB;</span>
+            <span class="text-purple-400">3.2 Agent System</span>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-gradient-to-b from-purple-900/30 to-transparent py-12 px-4">
+        <div class="max-w-5xl mx-auto">
+            <span class="inline-block px-3 py-1 text-xs font-bold uppercase tracking-wider text-purple-400 bg-purple-500/10 rounded-full border border-purple-500/30 mb-4">Modulo 3.2</span>
+            <h1 class="text-3xl md:text-4xl font-extrabold mb-3">&#x1F916; Agent System</h1>
+            <p class="text-lg dark:text-gray-300 max-w-3xl">Delegacao de trabalho entre instancias Claude: tres tipos de agente, sync vs async, fork path com cache sharing e worktree isolation.</p>
+            <div class="flex items-center gap-4 mt-4 text-sm dark:text-gray-400">
+                <span>&#x23F1; ~60 min</span>
+                <span>&#x1F4CA; 6 secoes</span>
+                <span>&#x1F3AF; Avancado</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 pb-20 space-y-12">
+
+        <!-- Section 1: Three Agent Types -->
+        <section>
+            <div class="flex items-center gap-3 mb-6">
+                <span class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-sm font-bold flex-shrink-0">1</span>
+                <h2 class="text-2xl font-bold dark:text-white">Three Agent Types &amp; Priority</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 space-y-4">
+                <p class="dark:text-gray-300">O agent system permite uma instancia Claude delegar trabalho para outras. Cada agente spawned opera como um LLM turn separado com tool pool, system prompt e modelo proprios. Todos satisfazem <code class="bg-purple-500/10 text-purple-400 px-1.5 py-0.5 rounded text-sm">AgentDefinition</code> (discriminated union on <code class="text-xs">source</code>).</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border border-blue-500/30">
+                        <h4 class="font-bold dark:text-white mb-2">&#x1F537; BuiltInAgent</h4>
+                        <p class="text-xs dark:text-gray-400">Ships com Claude Code. Dynamic system prompts via <code class="text-xs">getSystemPrompt()</code>. Nao pode ser overridden por user files -- mas managed (policy) agents podem shadow.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border border-green-500/30">
+                        <h4 class="font-bold dark:text-white mb-2">&#x1F4DD; CustomAgent</h4>
+                        <p class="text-xs dark:text-gray-400">User/project/policy-settings. Loaded de <code class="text-xs">.claude/agents/*.md</code> ou JSON blobs em <code class="text-xs">settings.json</code>. System prompt em closure.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border border-purple-500/30">
+                        <h4 class="font-bold dark:text-white mb-2">&#x1F9E9; PluginAgent</h4>
+                        <p class="text-xs dark:text-gray-400">Bundled com plugin (<code class="text-xs">--plugin-dir</code>). Tratado como admin-trusted para MCP server policy.</p>
+                    </div>
+                </div>
+
+                <div class="dark:bg-dark-800 rounded-lg p-4 border border-purple-500/30">
+                    <h4 class="text-purple-400 font-bold text-sm mb-2">Priority / Override Order</h4>
+                    <p class="text-sm dark:text-gray-400"><code class="text-xs">built-in &#x2192; plugin &#x2192; userSettings &#x2192; projectSettings &#x2192; flagSettings &#x2192; policySettings</code></p>
+                    <p class="text-xs dark:text-gray-500 mt-1">Later groups overwrite earlier ones, entao <strong>policySettings</strong> (managed agents) tem highest effective priority.</p>
+                </div>
+
+                <!-- Mermaid Diagram -->
+                <div class="mt-4 mermaid-wrapper">
+                    <pre class="mermaid">
+flowchart TD
+  ML["Main Loop
+parent REPL / SDK"]
+  AT["AgentTool
+tool: Agent / Task"]
+  ML -->|"calls"| AT
+  AT --> BI["Built-In Agents
+source: built-in"]
+  AT --> CA["Custom Agents
+source: userSettings / projectSettings"]
+  AT --> PA["Plugin Agents
+source: plugin"]
+  BI --> GP["general-purpose
+tools: all"]
+  BI --> EX["Explore
+read-only, haiku/inherit"]
+  BI --> PL["Plan
+read-only, inherit"]
+  BI --> VF["verification
+background: true"]
+  CA --> MD["Markdown .md
+.claude/agents/"]
+  CA --> JS["JSON frontmatter
+settings.json agents"]
+  AT --> SY["Sync Lifecycle
+blocks parent turn"]
+  AT --> AS["Async Lifecycle
+fire-and-forget"]
+  AT --> FK["Fork Path
+inherits parent context"]
+  style ML fill:#1a1816,stroke:#7d9ab8,color:#b8b0a4
+  style AT fill:#1a1816,stroke:#7d9ab8,color:#b8b0a4
+  style BI fill:#171513,stroke:#7d9ab8,color:#7d9ab8
+  style CA fill:#1d211b,stroke:#6e9468,color:#6e9468
+  style PA fill:#1f1b24,stroke:#8e82ad,color:#8e82ad
+  style GP fill:#141211,stroke:#3a3632,color:#5c564f
+  style EX fill:#141211,stroke:#3a3632,color:#5c564f
+  style PL fill:#141211,stroke:#3a3632,color:#5c564f
+  style VF fill:#241816,stroke:#c47a50,color:#c47a50
+  style MD fill:#141211,stroke:#3a3632,color:#5c564f
+  style JS fill:#141211,stroke:#3a3632,color:#5c564f
+  style SY fill:#141211,stroke:#3a3632,color:#5c564f
+  style AS fill:#231f16,stroke:#b8965e,color:#b8965e
+  style FK fill:#1f1b24,stroke:#8e82ad,color:#8e82ad
+                    </pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Built-In Agents -->
+        <section>
+            <div class="flex items-center gap-3 mb-6">
+                <span class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-sm font-bold flex-shrink-0">2</span>
+                <h2 class="text-2xl font-bold dark:text-white">Built-In Agents Deep Dive</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 space-y-4">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b dark:border-gray-700">
+                                <th class="text-left py-2 pr-3 dark:text-gray-300">Agent</th>
+                                <th class="text-left py-2 pr-3 dark:text-gray-300">Model</th>
+                                <th class="text-left py-2 pr-3 dark:text-gray-300">Tools</th>
+                                <th class="text-left py-2 dark:text-gray-300">Mode</th>
+                            </tr>
+                        </thead>
+                        <tbody class="dark:text-gray-400">
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 pr-3 font-medium dark:text-white">General Purpose</td><td class="py-2 pr-3">default subagent</td><td class="py-2 pr-3">['*'] -- all tools</td><td class="py-2">sync / async</td></tr>
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 pr-3 font-medium dark:text-white">Explore</td><td class="py-2 pr-3">haiku / inherit</td><td class="py-2 pr-3">read-only</td><td class="py-2">sync</td></tr>
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 pr-3 font-medium dark:text-white">Plan</td><td class="py-2 pr-3">inherit</td><td class="py-2 pr-3">read-only (same as Explore)</td><td class="py-2">sync</td></tr>
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 pr-3 font-medium text-yellow-400">Verification</td><td class="py-2 pr-3">inherit</td><td class="py-2 pr-3">no Edit/Write; ephemeral /tmp</td><td class="py-2">background: true</td></tr>
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 pr-3 font-medium dark:text-white">Fork</td><td class="py-2 pr-3">inherit</td><td class="py-2 pr-3">['*'] with useExactTools</td><td class="py-2">experimental</td></tr>
+                            <tr><td class="py-2 pr-3 font-medium dark:text-white">StatuslineSetup</td><td class="py-2 pr-3">default</td><td class="py-2 pr-3">limited shell</td><td class="py-2">sync</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="dark:bg-dark-800 rounded-lg p-4 border border-purple-500/30 text-sm">
+                    <p class="dark:text-gray-300"><strong class="text-purple-400">Otimizacao chave:</strong> <code class="text-xs">omitClaudeMd: true</code> em Explore e Plan economiza ~5-15 Gtok/semana ao nao injetar CLAUDE.md no system prompt desses sub-agents.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Sync vs Async -->
+        <section>
+            <div class="flex items-center gap-3 mb-6">
+                <span class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-sm font-bold flex-shrink-0">3</span>
+                <h2 class="text-2xl font-bold dark:text-white">Sync vs Async Lifecycle</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 space-y-4">
+                <p class="dark:text-gray-300">Um unico boolean <code class="bg-purple-500/10 text-purple-400 px-1.5 py-0.5 rounded text-sm">shouldRunAsync</code> decide tudo. 6 condicoes podem forcar async:</p>
+
+                <pre class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 overflow-x-auto text-sm"><code class="dark:text-gray-300"><span class="text-purple-400">const</span> shouldRunAsync = (
+  run_in_background === <span class="text-yellow-400">true</span>
+  || selectedAgent.background === <span class="text-yellow-400">true</span>
+  || isCoordinator
+  || forceAsync
+  || assistantForceAsync
+  || (proactiveModule?.isProactiveActive() ?? <span class="text-yellow-400">false</span>)
+) && !isBackgroundTasksDisabled</code></pre>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border border-blue-500/30">
+                        <h4 class="font-bold dark:text-white mb-2">&#x1F504; Synchronous Path</h4>
+                        <ol class="text-sm dark:text-gray-400 space-y-1 list-decimal list-inside">
+                            <li>Build system prompt + prompt messages</li>
+                            <li>Optional: create git worktree</li>
+                            <li><code class="text-xs">await runAgent(params)</code> -- Parent blocked</li>
+                            <li>Cleanup worktree (if no changes)</li>
+                        </ol>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border border-yellow-500/30">
+                        <h4 class="font-bold dark:text-white mb-2">&#x26A1; Asynchronous Path</h4>
+                        <ol class="text-sm dark:text-gray-400 space-y-1 list-decimal list-inside">
+                            <li><code class="text-xs">registerAsyncAgent()</code> -- task in AppState</li>
+                            <li>Return <code class="text-xs">status: 'async_launched'</code> immediately</li>
+                            <li><code class="text-xs">void runAsyncAgentLifecycle(...)</code> (detached)</li>
+                            <li>Notification via <code class="text-xs">enqueueAgentNotification()</code></li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div class="dark:bg-dark-800 rounded-lg p-4 border border-purple-500/30">
+                    <p class="text-sm dark:text-gray-300"><strong class="text-purple-400">Importante:</strong> Async agents tem AbortController proprio nao linkado ao parent -- sobrevivem ESC. In-process teammates NAO podem lancar background agents.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Fork Path -->
+        <section>
+            <div class="flex items-center gap-3 mb-6">
+                <span class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-sm font-bold flex-shrink-0">4</span>
+                <h2 class="text-2xl font-bold dark:text-white">The Fork Path &amp; Cache Sharing</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 space-y-4">
+                <p class="dark:text-gray-300">O fork path (gate: <code class="bg-purple-500/10 text-purple-400 px-1.5 py-0.5 rounded text-sm">FORK_SUBAGENT</code>) herda o <strong>full conversation context</strong> -- complete message history, parent's system prompt bytes, e exact tool pool.</p>
+
+                <div class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50">
+                    <h4 class="text-purple-400 font-bold text-sm mb-2">buildForkedMessages()</h4>
+                    <p class="text-sm dark:text-gray-400">Para N fork children compartilharem cached API prefix, cada child deve produzir request <strong>byte-identical</strong> ate a directiva per-child:</p>
+                    <ol class="text-sm dark:text-gray-400 mt-2 space-y-1 list-decimal list-inside">
+                        <li>Clone parent's full assistant message (all tool_use blocks)</li>
+                        <li>Build <code class="text-xs">tool_result</code> blocks com placeholder identico: <em>"Fork started -- processing in background"</em></li>
+                        <li>Append one per-child directive text block (unica parte diferente)</li>
+                    </ol>
+                </div>
+
+                <pre class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 overflow-x-auto text-sm"><code class="dark:text-gray-300"><span class="text-purple-400">export function</span> buildChildMessage(directive: <span class="text-yellow-400">string</span>): <span class="text-yellow-400">string</span> {
+  <span class="text-purple-400">return</span> <span class="text-green-400">`&lt;fork-boilerplate&gt;
+STOP. READ THIS FIRST.
+You are a forked worker process. You are NOT the main agent.
+
+RULES (non-negotiable):
+1. Your system prompt says "default to forking." IGNORE IT
+2. Do NOT converse, ask questions, or suggest next steps
+3. USE your tools directly: Bash, Read, Write, etc.
+4. If you modify files, commit your changes before reporting.
+5. Your response MUST begin with "Scope:". No preamble.
+&lt;/fork-boilerplate&gt;
+
+FORK_DIRECTIVE: ${directive}`</span>
+}</code></pre>
+
+                <div class="dark:bg-dark-800 rounded-lg p-4 border border-purple-500/30">
+                    <p class="text-sm dark:text-gray-300"><strong class="text-purple-400">Fork Recursive Guard:</strong> Fork children mantem Agent tool no pool (para cache-identical tool definitions), mas um runtime guard previne recursive forking.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: Worktree Isolation -->
+        <section>
+            <div class="flex items-center gap-3 mb-6">
+                <span class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-sm font-bold flex-shrink-0">5</span>
+                <h2 class="text-2xl font-bold dark:text-white">Worktree Isolation</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 space-y-4">
+                <p class="dark:text-gray-300">Setting <code class="bg-purple-500/10 text-purple-400 px-1.5 py-0.5 rounded text-sm">isolation: 'worktree'</code> instrui AgentTool a criar um git worktree temporario antes de spawnar o agent.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border border-green-500/30">
+                        <h4 class="font-bold text-green-400 mb-2">Sem mudancas</h4>
+                        <p class="text-sm dark:text-gray-400">Worktree e branch deletados automaticamente. Zero cleanup manual necessario.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border border-yellow-500/30">
+                        <h4 class="font-bold text-yellow-400 mb-2">Com mudancas</h4>
+                        <p class="text-sm dark:text-gray-400">Branch mantido para parent inspecionar ou mergear. Notificacao via <code class="text-xs">buildWorktreeNotice()</code>.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 6: SendMessageTool & Frontmatter -->
+        <section>
+            <div class="flex items-center gap-3 mb-6">
+                <span class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-sm font-bold flex-shrink-0">6</span>
+                <h2 class="text-2xl font-bold dark:text-white">SendMessageTool &amp; Agent Frontmatter</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 space-y-4">
+                <p class="dark:text-gray-300"><code class="bg-purple-500/10 text-purple-400 px-1.5 py-0.5 rounded text-sm">SendMessageTool</code> (wire name: SendMessage) e o primitivo de messaging inter-agente.</p>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b dark:border-gray-700">
+                                <th class="text-left py-2 pr-3 dark:text-gray-300">to</th>
+                                <th class="text-left py-2 pr-3 dark:text-gray-300">message type</th>
+                                <th class="text-left py-2 dark:text-gray-300">Result</th>
+                            </tr>
+                        </thead>
+                        <tbody class="dark:text-gray-400">
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 pr-3 font-mono text-xs">"teammate-name"</td><td class="py-2 pr-3">string</td><td class="py-2">Written to teammate's mailbox file</td></tr>
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 pr-3 font-mono text-xs">"*"</td><td class="py-2 pr-3">string</td><td class="py-2">Broadcast to all team members</td></tr>
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 pr-3 font-mono text-xs">any name</td><td class="py-2 pr-3">shutdown_request</td><td class="py-2">Sends structured shutdown request</td></tr>
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 pr-3 font-mono text-xs">"team-lead"</td><td class="py-2 pr-3">shutdown_response</td><td class="py-2">Approve triggers gracefulShutdown(0)</td></tr>
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 pr-3 font-mono text-xs">"uds:&lt;path&gt;"</td><td class="py-2 pr-3">string</td><td class="py-2">Unix domain socket -- cross-session</td></tr>
+                            <tr><td class="py-2 pr-3 font-mono text-xs">"bridge:&lt;session-id&gt;"</td><td class="py-2 pr-3">string only</td><td class="py-2">Remote Control: posts to another instance</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="dark:bg-dark-800 rounded-lg p-4 border border-purple-500/30">
+                    <h4 class="text-purple-400 font-bold text-sm mb-2">Custom Agent Markdown Format</h4>
+                    <pre class="dark:bg-dark-950 rounded p-3 overflow-x-auto text-sm"><code class="dark:text-gray-300"><span class="text-purple-400">---</span>
+<span class="text-purple-400">name:</span> my-agent
+<span class="text-purple-400">description:</span> A focused TypeScript refactoring specialist.
+<span class="text-purple-400">model:</span> sonnet
+<span class="text-purple-400">tools:</span> [Read, Edit, Bash, Grep, Glob]
+<span class="text-purple-400">permissionMode:</span> acceptEdits
+<span class="text-purple-400">maxTurns:</span> 50
+<span class="text-purple-400">memory:</span> project
+<span class="text-purple-400">isolation:</span> worktree
+<span class="text-purple-400">---</span>
+You are a TypeScript refactoring specialist...</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary -->
+        <section>
+            <div class="dark:bg-dark-900 rounded-xl border border-purple-500/30 p-6">
+                <h3 class="text-xl font-bold text-purple-400 mb-4">&#x1F4CB; Resumo do Modulo</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="flex items-start gap-2 text-sm dark:text-gray-300">
+                        <span class="text-purple-400 mt-0.5">&#x2714;</span>
+                        <span>3 tipos: BuiltIn, Custom, Plugin -- policy settings vencem em conflitos</span>
+                    </div>
+                    <div class="flex items-start gap-2 text-sm dark:text-gray-300">
+                        <span class="text-purple-400 mt-0.5">&#x2714;</span>
+                        <span>shouldRunAsync boolean e o unico branch point (6 condicoes)</span>
+                    </div>
+                    <div class="flex items-start gap-2 text-sm dark:text-gray-300">
+                        <span class="text-purple-400 mt-0.5">&#x2714;</span>
+                        <span>Async agents sobrevivem ESC com AbortController proprio</span>
+                    </div>
+                    <div class="flex items-start gap-2 text-sm dark:text-gray-300">
+                        <span class="text-purple-400 mt-0.5">&#x2714;</span>
+                        <span>Fork path: byte-identical placeholders para maximo cache sharing</span>
+                    </div>
+                    <div class="flex items-start gap-2 text-sm dark:text-gray-300">
+                        <span class="text-purple-400 mt-0.5">&#x2714;</span>
+                        <span>Worktree: smart cleanup -- sem changes = delete, com changes = keep</span>
+                    </div>
+                    <div class="flex items-start gap-2 text-sm dark:text-gray-300">
+                        <span class="text-purple-400 mt-0.5">&#x2714;</span>
+                        <span>Verification e o unico built-in com background:true hardcoded</span>
+                    </div>
+                    <div class="flex items-start gap-2 text-sm dark:text-gray-300">
+                        <span class="text-purple-400 mt-0.5">&#x2714;</span>
+                        <span>omitClaudeMd em Explore/Plan economiza ~5-15 Gtok/semana</span>
+                    </div>
+                    <div class="flex items-start gap-2 text-sm dark:text-gray-300">
+                        <span class="text-purple-400 mt-0.5">&#x2714;</span>
+                        <span>SendMessageTool: 4 message types, 3 addressing schemes</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Navigation -->
+        <div class="flex items-center justify-between pt-8 border-t dark:border-gray-800">
+            <a href="modulo-3-1.html" class="flex items-center gap-2 dark:text-gray-400 hover:text-purple-400 transition-colors">
+                <span>&#x2190;</span> 3.1 Skills System
+            </a>
+            <a href="modulo-3-3.html" class="flex items-center gap-2 text-purple-400 hover:text-purple-300 transition-colors">
+                3.3 Coordinator Mode <span>&#x2192;</span>
+            </a>
+        </div>
+    </main>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { primaryColor: '#7c3aed', primaryTextColor: '#e2e8f0', primaryBorderColor: '#7c3aed', lineColor: '#64748b', secondaryColor: '#1e293b', tertiaryColor: '#0f172a' }});
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.classList.contains('dark');
+            html.classList.toggle('dark', !isDark);
+            html.classList.toggle('light', isDark);
+            localStorage.setItem('theme', isDark ? 'light' : 'dark');
+        }
+
+        (function() {
+            const saved = localStorage.getItem('theme');
+            if (saved === 'light') {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+            }
+        })();
+    </script>
+</body>
+</html>

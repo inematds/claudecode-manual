@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3.4 Teams &amp; Swarm - Claude Code Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: { 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95' },
+                        dark: { 800: '#1e293b', 900: '#0f172a', 950: '#020617' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html.light { background: #f8fafc; color: #1e293b; }
+        html.light .dark\:bg-dark-950 { background: #f8fafc !important; }
+        html.light .dark\:bg-dark-900 { background: #ffffff !important; }
+        html.light .dark\:bg-dark-800 { background: #f1f5f9 !important; }
+        html.light .dark\:bg-dark-900\/50 { background: rgba(255,255,255,0.8) !important; }
+        html.light .dark\:bg-dark-800\/50 { background: rgba(241,245,249,0.8) !important; }
+        html.light .dark\:text-white { color: #1e293b !important; }
+        html.light .dark\:text-gray-100 { color: #334155 !important; }
+        html.light .dark\:text-gray-300 { color: #475569 !important; }
+        html.light .dark\:text-gray-400 { color: #64748b !important; }
+        html.light .dark\:text-gray-500 { color: #94a3b8 !important; }
+        html.light .dark\:border-gray-700 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-800 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-700\/50 { border-color: rgba(226,232,240,0.5) !important; }
+        html.light .text-purple-400 { color: #7c3aed !important; }
+        html.light .text-purple-500 { color: #6d28d9 !important; }
+        html.light .bg-purple-500\/10 { background: rgba(124,58,237,0.08) !important; }
+        html.light .bg-purple-500\/20 { background: rgba(124,58,237,0.12) !important; }
+        html.light .border-purple-500\/30 { border-color: rgba(124,58,237,0.2) !important; }
+        html.light .from-purple-900\/30 { --tw-gradient-from: rgba(124,58,237,0.08) !important; }
+        html.light nav { background: rgba(255,255,255,0.85) !important; border-bottom: 1px solid #e2e8f0 !important; }
+        html.light .dark\:hover\:bg-dark-800:hover { background: #e2e8f0 !important; }
+        html.light pre { background: #f1f5f9 !important; border-color: #e2e8f0 !important; }
+        html.light code { color: #334155 !important; }
+    </style>
+</head>
+<body class="dark:bg-dark-950 dark:text-white font-sans min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-40 backdrop-blur-xl dark:bg-dark-900/50 border-b dark:border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
+            <a href="../../index.html" class="text-yellow-400 font-bold text-lg whitespace-nowrap">&#x1F4BB; Claude Code Deep Dive</a>
+            <span class="dark:text-gray-600">|</span>
+            <a href="https://inema.club" target="_blank" class="text-sky-400 text-sm font-medium hover:underline">INEMA.CLUB</a>
+            <div class="flex items-center gap-1 ml-auto flex-wrap">
+                <a href="../trilha1/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Core Architecture</span><span class="md:hidden">T1</span></a>
+                <a href="../trilha2/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Tool System</span><span class="md:hidden">T2</span></a>
+                <a href="../trilha3/" class="px-2 py-1 text-xs font-bold rounded bg-purple-500/20 text-purple-400 border border-purple-500/30"><span class="hidden md:inline">Agent Intelligence</span><span class="md:hidden">T3</span></a>
+                <a href="../trilha4/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Interface</span><span class="md:hidden">T4</span></a>
+                <a href="../trilha5/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Infrastructure</span><span class="md:hidden">T5</span></a>
+                <a href="../trilha6/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Connectivity</span><span class="md:hidden">T6</span></a>
+                <a href="../trilha7/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Unreleased Features</span><span class="md:hidden">T7</span></a>
+                <a href="../trilha8/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Big Picture</span><span class="md:hidden">T8</span></a>
+                <button onclick="toggleTheme()" class="ml-2 p-2 rounded-lg dark:hover:bg-dark-800 dark:text-gray-400" title="Alternar tema">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <div class="max-w-5xl mx-auto px-4 pt-6">
+        <div class="flex items-center gap-2 text-sm dark:text-gray-400">
+            <a href="../trilha3/" class="hover:text-purple-400 transition-colors">Trilha 3</a>
+            <span>&#xBB;</span>
+            <span class="text-purple-400">3.4 Teams &amp; Swarm</span>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-gradient-to-b from-purple-900/30 to-transparent py-12 px-4">
+        <div class="max-w-5xl mx-auto">
+            <span class="inline-block px-3 py-1 text-xs font-bold uppercase tracking-wider text-purple-400 bg-purple-500/10 rounded-full border border-purple-500/30 mb-4">Modulo 3.4</span>
+            <h1 class="text-3xl md:text-4xl font-extrabold mb-3">&#x1F465; Teams &amp; Swarm</h1>
+            <p class="text-lg dark:text-gray-300 max-w-3xl">Equipes nomeadas de Claude agents com config compartilhada, messaging file-based, tres spawn backends e lifecycle completo.</p>
+            <div class="flex items-center gap-4 mt-4 text-sm dark:text-gray-400">
+                <span>&#x23F1; ~50 min</span>
+                <span>&#x1F4CA; 6 secoes</span>
+                <span>&#x1F3AF; Avancado</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 pb-20 space-y-12">
+
+        <!-- Section 1: TeamCreateTool -->
+        <section>
+            <div class="flex items-center gap-3 mb-6">
+                <span class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-sm font-bold flex-shrink-0">1</span>
+                <h2 class="text-2xl font-bold dark:text-white">TeamCreateTool &amp; File Structure</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 space-y-4">
+                <p class="dark:text-gray-300">Um <strong class="text-purple-400">swarm</strong> e um named team de Claude agents compartilhando configuracao, tasks e infraestrutura de mailbox file-based. Requer <code class="bg-purple-500/10 text-purple-400 px-1.5 py-0.5 rounded text-sm">CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1</code>.</p>
+
+                <div class="dark:bg-dark-800 rounded-lg p-4 border border-purple-500/30">
+                    <h4 class="text-purple-400 font-bold text-sm mb-2">TeamCreateTool -- 5 passos sincronos</h4>
+                    <ol class="text-sm dark:text-gray-400 space-y-1.5 list-decimal list-inside">
+                        <li><strong>Uniqueness check:</strong> Se nome existe, <code class="text-xs">generateWordSlug()</code> substitui um nome aleatorio</li>
+                        <li><strong>Write team config:</strong> TeamFile JSON em <code class="text-xs">~/.claude/teams/&lt;name&gt;/config.json</code></li>
+                        <li><strong>Create task list:</strong> Fresh numbering comeca em 1</li>
+                        <li><strong>Update AppState:</strong> Sets <code class="text-xs">appState.teamContext</code></li>
+                        <li><strong>Register cleanup:</strong> Shutdown hook limpa directories orfaos</li>
+                    </ol>
+                </div>
+
+                <pre class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 overflow-x-auto text-sm"><code class="dark:text-gray-300"><span class="text-gray-500">~/.claude/</span>
+  <span class="text-purple-400">teams/</span>
+    my-team/
+      config.json           <span class="text-gray-500">&lt;- TeamFile</span>
+      permissions/
+        pending/
+        resolved/
+  <span class="text-purple-400">tasks/</span>
+    my-team/
+      0001.json
+      0002.json</code></pre>
+
+                <div class="dark:bg-dark-800 rounded-lg p-3 border dark:border-gray-700/50">
+                    <p class="text-sm dark:text-gray-400"><strong class="text-purple-400">Agent ID Format:</strong> <code class="bg-purple-500/10 text-purple-400 px-1 rounded text-xs">agentName@teamName</code> (ex: <code class="text-xs">researcher@my-team</code>)</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Three Spawn Backends -->
+        <section>
+            <div class="flex items-center gap-3 mb-6">
+                <span class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-sm font-bold flex-shrink-0">2</span>
+                <h2 class="text-2xl font-bold dark:text-white">Three Spawn Backends</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border border-green-500/30">
+                        <h4 class="font-bold text-green-400 mb-1">tmux</h4>
+                        <p class="text-xs dark:text-gray-500 mb-2">Highest priority</p>
+                        <p class="text-sm dark:text-gray-400">Kill via <code class="text-xs">kill-pane -t &lt;paneId&gt;</code>. Detectado via <code class="text-xs">TMUX</code> e <code class="text-xs">TMUX_PANE</code> env vars.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border border-blue-500/30">
+                        <h4 class="font-bold text-blue-400 mb-1">iTerm2</h4>
+                        <p class="text-xs dark:text-gray-500 mb-2">Second priority</p>
+                        <p class="text-sm dark:text-gray-400">Kill via <code class="text-xs">it2 session close</code>. Check usa <code class="text-xs">it2 session list</code> (nao --version).</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border border-yellow-500/30">
+                        <h4 class="font-bold text-yellow-400 mb-1">in-process</h4>
+                        <p class="text-xs dark:text-gray-500 mb-2">Non-interactive fallback</p>
+                        <p class="text-sm dark:text-gray-400">Abort via AbortController. Isolated via <code class="text-xs">AsyncLocalStorage</code>. Shares API client e MCP connections.</p>
+                    </div>
+                </div>
+
+                <div class="dark:bg-dark-800 rounded-lg p-4 border border-purple-500/30">
+                    <p class="text-sm dark:text-gray-300"><strong class="text-purple-400">Importante:</strong> Detection usa env vars capturadas em <strong>module load time</strong>: TMUX, TMUX_PANE, TERM_PROGRAM, ITERM_SESSION_ID. Uma vez capturadas, sao imutaveis.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Mailbox Messaging -->
+        <section>
+            <div class="flex items-center gap-3 mb-6">
+                <span class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-sm font-bold flex-shrink-0">3</span>
+                <h2 class="text-2xl font-bold dark:text-white">Mailbox Messaging System</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 space-y-4">
+                <p class="dark:text-gray-300">Toda comunicacao entre agents e via <strong>file-based mailbox</strong>. Messages sao JSON files em <code class="bg-purple-500/10 text-purple-400 px-1.5 py-0.5 rounded text-sm">~/.claude/teams/&lt;team&gt;/inbox/&lt;agent-name&gt;/</code>.</p>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b dark:border-gray-700">
+                                <th class="text-left py-2 pr-3 dark:text-gray-300">Tipo</th>
+                                <th class="text-left py-2 pr-3 dark:text-gray-300">Direcao</th>
+                                <th class="text-left py-2 dark:text-gray-300">Proposito</th>
+                            </tr>
+                        </thead>
+                        <tbody class="dark:text-gray-400">
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 pr-3 font-medium">plain text</td><td class="py-2 pr-3">any &#x2192; any</td><td class="py-2">Task updates, questions, results</td></tr>
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 pr-3 font-medium">shutdown_request</td><td class="py-2 pr-3">lead &#x2192; teammate</td><td class="py-2">Graceful shutdown signal</td></tr>
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 pr-3 font-medium">idle notification</td><td class="py-2 pr-3">teammate &#x2192; lead</td><td class="py-2">System-generated after every turn end</td></tr>
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 pr-3 font-medium">permission_request</td><td class="py-2 pr-3">worker &#x2192; lead</td><td class="py-2">Worker needs UI approval</td></tr>
+                            <tr class="border-b dark:border-gray-800"><td class="py-2 pr-3 font-medium">permission_response</td><td class="py-2 pr-3">lead &#x2192; worker</td><td class="py-2">Approval/denial of tool use</td></tr>
+                            <tr><td class="py-2 pr-3 font-medium">mode_set_request</td><td class="py-2 pr-3">lead &#x2192; teammate</td><td class="py-2">Change teammate's permission mode</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Permission Sync -->
+        <section>
+            <div class="flex items-center gap-3 mb-6">
+                <span class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-sm font-bold flex-shrink-0">4</span>
+                <h2 class="text-2xl font-bold dark:text-white">Permission Sync</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 space-y-4">
+                <p class="dark:text-gray-300">Workers podem escalar permission requests para o team lead via mailbox. O leader ve o request na UI e aprova ou nega, permitindo <strong>controle centralizado de permissoes</strong> em swarms.</p>
+
+                <div class="flex items-center gap-3 dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50">
+                    <div class="text-center">
+                        <div class="dark:bg-dark-900 rounded-lg px-3 py-2 border dark:border-gray-700 text-sm">Worker</div>
+                    </div>
+                    <div class="text-purple-400">&#x2192;</div>
+                    <div class="text-center">
+                        <div class="bg-purple-500/10 rounded-lg px-3 py-2 border border-purple-500/30 text-sm text-purple-400">permission_request</div>
+                    </div>
+                    <div class="text-purple-400">&#x2192;</div>
+                    <div class="text-center">
+                        <div class="dark:bg-dark-900 rounded-lg px-3 py-2 border dark:border-gray-700 text-sm">Lead (UI)</div>
+                    </div>
+                    <div class="text-purple-400">&#x2192;</div>
+                    <div class="text-center">
+                        <div class="bg-purple-500/10 rounded-lg px-3 py-2 border border-purple-500/30 text-sm text-purple-400">permission_response</div>
+                    </div>
+                    <div class="text-purple-400">&#x2192;</div>
+                    <div class="text-center">
+                        <div class="dark:bg-dark-900 rounded-lg px-3 py-2 border dark:border-gray-700 text-sm">Worker</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: Full Lifecycle -->
+        <section>
+            <div class="flex items-center gap-3 mb-6">
+                <span class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-sm font-bold flex-shrink-0">5</span>
+                <h2 class="text-2xl font-bold dark:text-white">Full Lifecycle: 4 Phases</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 space-y-4">
+                <div class="space-y-3">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border border-blue-500/30">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-blue-400 font-bold text-sm">Phase 1</span>
+                            <span class="font-bold dark:text-white">Setup</span>
+                        </div>
+                        <p class="text-sm dark:text-gray-400">Lead calls TeamCreate, creates tasks, spawns teammates</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border border-green-500/30">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-green-400 font-bold text-sm">Phase 2</span>
+                            <span class="font-bold dark:text-white">Parallel Work</span>
+                        </div>
+                        <p class="text-sm dark:text-gray-400">Teammates claim tasks, send progress, work in parallel</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border border-yellow-500/30">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-yellow-400 font-bold text-sm">Phase 3</span>
+                            <span class="font-bold dark:text-white">Shutdown</span>
+                        </div>
+                        <p class="text-sm dark:text-gray-400">Lead sends shutdown_request, teammates approve and exit via <code class="text-xs">gracefulShutdown(0)</code></p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border border-red-500/30">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-red-400 font-bold text-sm">Phase 4</span>
+                            <span class="font-bold dark:text-white">Cleanup Guard</span>
+                        </div>
+                        <p class="text-sm dark:text-gray-400">Se sessao termina sem TeamDelete, shutdown hook limpa orphaned panes e directories</p>
+                    </div>
+                </div>
+
+                <div class="dark:bg-dark-800 rounded-lg p-4 border border-purple-500/30">
+                    <p class="text-sm dark:text-gray-300"><strong class="text-purple-400">Atencao:</strong> <code class="text-xs">TeamDelete</code> blocks on active members. Sempre shutdown teammates primeiro antes de deletar o team.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 6: Key Design Invariants -->
+        <section>
+            <div class="flex items-center gap-3 mb-6">
+                <span class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-sm font-bold flex-shrink-0">6</span>
+                <h2 class="text-2xl font-bold dark:text-white">Key Design Invariants</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 space-y-3">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50">
+                        <h4 class="text-purple-400 font-bold text-sm mb-1">Team = TaskList</h4>
+                        <p class="text-xs dark:text-gray-400">TeamCreate cria um matching task directory. Sao coupled by design.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50">
+                        <h4 class="text-purple-400 font-bold text-sm mb-1">3 backends, 1 interface</h4>
+                        <p class="text-xs dark:text-gray-400">tmux, iTerm2 e in-process compartilham a mesma API. Backend e transparente.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50">
+                        <h4 class="text-purple-400 font-bold text-sm mb-1">Detection em module load</h4>
+                        <p class="text-xs dark:text-gray-400">Env vars lidas em import time. Imutaveis apos captura.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50">
+                        <h4 class="text-purple-400 font-bold text-sm mb-1">All messaging file-based</h4>
+                        <p class="text-xs dark:text-gray-400">Excecao: leader permission bridge usa module-level setter.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50">
+                        <h4 class="text-purple-400 font-bold text-sm mb-1">Idle != dead</h4>
+                        <p class="text-xs dark:text-gray-400"><code class="text-xs">isActive: false</code> significa turn ended. Teammate wakes on new message.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50">
+                        <h4 class="text-purple-400 font-bold text-sm mb-1">Session cleanup safety net</h4>
+                        <p class="text-xs dark:text-gray-400">Orphaned panes e directories limpos on graceful shutdown.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary -->
+        <section>
+            <div class="dark:bg-dark-900 rounded-xl border border-purple-500/30 p-6">
+                <h3 class="text-xl font-bold text-purple-400 mb-4">&#x1F4CB; Resumo do Modulo</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="flex items-start gap-2 text-sm dark:text-gray-300">
+                        <span class="text-purple-400 mt-0.5">&#x2714;</span>
+                        <span>Team = TaskList -- TeamCreate cria task directory junto</span>
+                    </div>
+                    <div class="flex items-start gap-2 text-sm dark:text-gray-300">
+                        <span class="text-purple-400 mt-0.5">&#x2714;</span>
+                        <span>3 backends: tmux (highest), iTerm2, in-process</span>
+                    </div>
+                    <div class="flex items-start gap-2 text-sm dark:text-gray-300">
+                        <span class="text-purple-400 mt-0.5">&#x2714;</span>
+                        <span>Detection capturada em module load (env vars imutaveis)</span>
+                    </div>
+                    <div class="flex items-start gap-2 text-sm dark:text-gray-300">
+                        <span class="text-purple-400 mt-0.5">&#x2714;</span>
+                        <span>All messaging file-based (exceto leader permission bridge)</span>
+                    </div>
+                    <div class="flex items-start gap-2 text-sm dark:text-gray-300">
+                        <span class="text-purple-400 mt-0.5">&#x2714;</span>
+                        <span>Idle != dead: isActive:false = turn ended, wakes on message</span>
+                    </div>
+                    <div class="flex items-start gap-2 text-sm dark:text-gray-300">
+                        <span class="text-purple-400 mt-0.5">&#x2714;</span>
+                        <span>TeamDelete blocks on active members -- shutdown primeiro</span>
+                    </div>
+                    <div class="flex items-start gap-2 text-sm dark:text-gray-300">
+                        <span class="text-purple-400 mt-0.5">&#x2714;</span>
+                        <span>Session cleanup e safety net para panes e dirs orfaos</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Navigation -->
+        <div class="flex items-center justify-between pt-8 border-t dark:border-gray-800">
+            <a href="modulo-3-3.html" class="flex items-center gap-2 dark:text-gray-400 hover:text-purple-400 transition-colors">
+                <span>&#x2190;</span> 3.3 Coordinator Mode
+            </a>
+            <a href="modulo-3-5.html" class="flex items-center gap-2 text-purple-400 hover:text-purple-300 transition-colors">
+                3.5 Memory System <span>&#x2192;</span>
+            </a>
+        </div>
+    </main>
+
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.classList.contains('dark');
+            html.classList.toggle('dark', !isDark);
+            html.classList.toggle('light', isDark);
+            localStorage.setItem('theme', isDark ? 'light' : 'dark');
+        }
+
+        (function() {
+            const saved = localStorage.getItem('theme');
+            if (saved === 'light') {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+            }
+        })();
+    </script>
+</body>
+</html>

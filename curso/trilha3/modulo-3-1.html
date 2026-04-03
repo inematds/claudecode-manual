@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3.1 Skills System - Claude Code Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: { 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95' },
+                        dark: { 800: '#1e293b', 900: '#0f172a', 950: '#020617' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html.light { background: #f8fafc; color: #1e293b; }
+        html.light .dark\:bg-dark-950 { background: #f8fafc !important; }
+        html.light .dark\:bg-dark-900 { background: #ffffff !important; }
+        html.light .dark\:bg-dark-800 { background: #f1f5f9 !important; }
+        html.light .dark\:bg-dark-900\/50 { background: rgba(255,255,255,0.8) !important; }
+        html.light .dark\:bg-dark-800\/50 { background: rgba(241,245,249,0.8) !important; }
+        html.light .dark\:text-white { color: #1e293b !important; }
+        html.light .dark\:text-gray-100 { color: #334155 !important; }
+        html.light .dark\:text-gray-300 { color: #475569 !important; }
+        html.light .dark\:text-gray-400 { color: #64748b !important; }
+        html.light .dark\:text-gray-500 { color: #94a3b8 !important; }
+        html.light .dark\:border-gray-700 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-800 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-700\/50 { border-color: rgba(226,232,240,0.5) !important; }
+        html.light .text-purple-400 { color: #7c3aed !important; }
+        html.light .text-purple-500 { color: #6d28d9 !important; }
+        html.light .bg-purple-500\/10 { background: rgba(124,58,237,0.08) !important; }
+        html.light .bg-purple-500\/20 { background: rgba(124,58,237,0.12) !important; }
+        html.light .border-purple-500\/30 { border-color: rgba(124,58,237,0.2) !important; }
+        html.light .from-purple-900\/30 { --tw-gradient-from: rgba(124,58,237,0.08) !important; }
+        html.light nav { background: rgba(255,255,255,0.85) !important; border-bottom: 1px solid #e2e8f0 !important; }
+        html.light .dark\:hover\:bg-dark-800:hover { background: #e2e8f0 !important; }
+        html.light pre { background: #f1f5f9 !important; border-color: #e2e8f0 !important; }
+        html.light code { color: #334155 !important; }
+        .mermaid-wrapper { display: flex; justify-content: center; overflow-x: auto; }
+    </style>
+</head>
+<body class="dark:bg-dark-950 dark:text-white font-sans min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-40 backdrop-blur-xl dark:bg-dark-900/50 border-b dark:border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
+            <a href="../../index.html" class="text-yellow-400 font-bold text-lg whitespace-nowrap">&#x1F4BB; Claude Code Deep Dive</a>
+            <span class="dark:text-gray-600">|</span>
+            <a href="https://inema.club" target="_blank" class="text-sky-400 text-sm font-medium hover:underline">INEMA.CLUB</a>
+            <div class="flex items-center gap-1 ml-auto flex-wrap">
+                <a href="../trilha1/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Core Architecture</span><span class="md:hidden">T1</span></a>
+                <a href="../trilha2/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Tool System</span><span class="md:hidden">T2</span></a>
+                <a href="../trilha3/" class="px-2 py-1 text-xs font-bold rounded bg-purple-500/20 text-purple-400 border border-purple-500/30"><span class="hidden md:inline">Agent Intelligence</span><span class="md:hidden">T3</span></a>
+                <a href="../trilha4/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Interface</span><span class="md:hidden">T4</span></a>
+                <a href="../trilha5/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Infrastructure</span><span class="md:hidden">T5</span></a>
+                <a href="../trilha6/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Connectivity</span><span class="md:hidden">T6</span></a>
+                <a href="../trilha7/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Unreleased Features</span><span class="md:hidden">T7</span></a>
+                <a href="../trilha8/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Big Picture</span><span class="md:hidden">T8</span></a>
+                <button onclick="toggleTheme()" class="ml-2 p-2 rounded-lg dark:hover:bg-dark-800 dark:text-gray-400" title="Alternar tema">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <div class="max-w-5xl mx-auto px-4 pt-6">
+        <div class="flex items-center gap-2 text-sm dark:text-gray-400">
+            <a href="../trilha3/" class="hover:text-purple-400 transition-colors">Trilha 3</a>
+            <span>&#xBB;</span>
+            <span class="text-purple-400">3.1 Skills System</span>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-gradient-to-b from-purple-900/30 to-transparent py-12 px-4">
+        <div class="max-w-5xl mx-auto">
+            <span class="inline-block px-3 py-1 text-xs font-bold uppercase tracking-wider text-purple-400 bg-purple-500/10 rounded-full border border-purple-500/30 mb-4">Modulo 3.1</span>
+            <h1 class="text-3xl md:text-4xl font-extrabold mb-3">&#x26A1; Skills System</h1>
+            <p class="text-lg dark:text-gray-300 max-w-3xl">Workflows reutilizaveis como slash commands: discovery, parsing, substituicao de argumentos, execucao inline/fork e integracao MCP.</p>
+            <div class="flex items-center gap-4 mt-4 text-sm dark:text-gray-400">
+                <span>&#x23F1; ~50 min</span>
+                <span>&#x1F4CA; 6 secoes</span>
+                <span>&#x1F3AF; Avancado</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 pb-20 space-y-12">
+
+        <!-- Section 1: Skill Lifecycle -->
+        <section>
+            <div class="flex items-center gap-3 mb-6">
+                <span class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-sm font-bold flex-shrink-0">1</span>
+                <h2 class="text-2xl font-bold dark:text-white">Skill Lifecycle: Six Stages</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 space-y-4">
+                <p class="dark:text-gray-300">Uma <strong class="text-purple-400">skill</strong> e um "named, reusable prompt workflow" armazenado como <code class="bg-purple-500/10 text-purple-400 px-1.5 py-0.5 rounded text-sm">SKILL.md</code> com YAML frontmatter. O lifecycle completo passa por 6 estagios:</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50">
+                        <div class="text-purple-400 font-bold text-sm mb-1">1. Discovery</div>
+                        <p class="text-xs dark:text-gray-400">Walk managed/user/project directories. Resolve symlinks para deduplicate.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50">
+                        <div class="text-purple-400 font-bold text-sm mb-1">2. Load</div>
+                        <p class="text-xs dark:text-gray-400">Read SKILL.md. Parse YAML frontmatter. Estima token budget.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50">
+                        <div class="text-purple-400 font-bold text-sm mb-1">3. Parse</div>
+                        <p class="text-xs dark:text-gray-400">Extract fields into Command object. Validate hooks, paths, effort, shell.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50">
+                        <div class="text-purple-400 font-bold text-sm mb-1">4. Substitute</div>
+                        <p class="text-xs dark:text-gray-400">Replace $ARGUMENTS, $1/$name, shell !backtick, ${CLAUDE_SKILL_DIR}.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50">
+                        <div class="text-purple-400 font-bold text-sm mb-1">5. Execute</div>
+                        <p class="text-xs dark:text-gray-400">Run inline (same context) ou fork (isolated sub-agent com own token budget).</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50">
+                        <div class="text-purple-400 font-bold text-sm mb-1">6. Inject</div>
+                        <p class="text-xs dark:text-gray-400">Tool result enters conversation. Allowed tools e model override applied.</p>
+                    </div>
+                </div>
+
+                <!-- Mermaid Diagram -->
+                <div class="mt-6 mermaid-wrapper">
+                    <pre class="mermaid">
+flowchart LR
+D["**Discovery**
+Walk managed / user /
+project / --add-dir paths.
+Read dir entries.
+Resolve symlinks."]
+L["**Load**
+Read SKILL.md.
+Parse YAML frontmatter.
+Estimate token budget."]
+P["**Parse**
+Extract all frontmatter
+fields into Command
+object. Validate hooks,
+paths, effort, shell."]
+S["**Substitute**
+Replace $ARGUMENTS,
+$1/$name, shell !backtick,
+${CLAUDE_SKILL_DIR},
+${CLAUDE_SESSION_ID}."]
+E["**Execute**
+Run inline (expand into
+conversation) or fork
+(isolated sub-agent with
+own token budget)."]
+I["**Inject**
+Tool result enters
+conversation. Allowed
+tools and model override
+applied for this turn."]
+D --> L --> P --> S --> E --> I
+style D fill:#22201d,stroke:#7d9ab8,color:#b8b0a4
+style L fill:#22201d,stroke:#7d9ab8,color:#b8b0a4
+style P fill:#22201d,stroke:#6e9468,color:#b8b0a4
+style S fill:#22201d,stroke:#c47a50,color:#b8b0a4
+style E fill:#22201d,stroke:#8e82ad,color:#b8b0a4
+style I fill:#22201d,stroke:#6e9468,color:#b8b0a4
+                    </pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Four Sources & Priority -->
+        <section>
+            <div class="flex items-center gap-3 mb-6">
+                <span class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-sm font-bold flex-shrink-0">2</span>
+                <h2 class="text-2xl font-bold dark:text-white">Four Sources &amp; Priority Order</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 space-y-4">
+                <p class="dark:text-gray-300">Skills sao carregadas de 4 fontes com prioridade definida. <em>"When two sources define a skill with the same name, the first one loaded wins."</em> Deduplication usa resolved file paths, nao nomes.</p>
+
+                <div class="space-y-3">
+                    <div class="flex items-start gap-3 dark:bg-dark-800 rounded-lg p-4 border border-purple-500/30">
+                        <span class="text-purple-400 font-bold text-lg">1</span>
+                        <div>
+                            <div class="font-bold dark:text-white">Managed / Policy</div>
+                            <p class="text-sm dark:text-gray-400"><code class="bg-purple-500/10 text-purple-400 px-1 rounded text-xs">managed/.claude/skills/</code> -- Enterprise-controlled, highest priority</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50">
+                        <span class="text-purple-400 font-bold text-lg">2</span>
+                        <div>
+                            <div class="font-bold dark:text-white">User</div>
+                            <p class="text-sm dark:text-gray-400"><code class="bg-purple-500/10 text-purple-400 px-1 rounded text-xs">~/.claude/skills/</code> -- Personal cross-project library</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50">
+                        <span class="text-purple-400 font-bold text-lg">3</span>
+                        <div>
+                            <div class="font-bold dark:text-white">Project</div>
+                            <p class="text-sm dark:text-gray-400"><code class="bg-purple-500/10 text-purple-400 px-1 rounded text-xs">.claude/skills/</code> -- Repository-scoped</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50">
+                        <span class="text-purple-400 font-bold text-lg">4</span>
+                        <div>
+                            <div class="font-bold dark:text-white">Bundled</div>
+                            <p class="text-sm dark:text-gray-400">Compiladas no CLI -- Lowest priority</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: SKILL.md Format & Frontmatter -->
+        <section>
+            <div class="flex items-center gap-3 mb-6">
+                <span class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-sm font-bold flex-shrink-0">3</span>
+                <h2 class="text-2xl font-bold dark:text-white">SKILL.md Format &amp; Frontmatter</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 space-y-4">
+                <p class="dark:text-gray-300">O formato SKILL.md usa YAML frontmatter com 15+ fields que controlam tudo: quais tools a skill pode usar, em qual modelo roda, quando ativa automaticamente.</p>
+
+                <pre class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 overflow-x-auto text-sm"><code class="dark:text-gray-300"><span class="text-purple-400">---</span>
+<span class="text-purple-400">name:</span> "Display Name"
+<span class="text-purple-400">description:</span> "One-line summary"
+<span class="text-purple-400">when_to_use:</span> "Auto-invoke hint"
+<span class="text-purple-400">allowed-tools:</span>
+  - Bash(gh:*)
+  - Read
+  - Write
+<span class="text-purple-400">argument-hint:</span> "[branch] [message]"
+<span class="text-purple-400">arguments:</span> branch message
+<span class="text-purple-400">context:</span> fork
+<span class="text-purple-400">model:</span> claude-opus-4-5
+<span class="text-purple-400">effort:</span> high
+<span class="text-purple-400">version:</span> "1.0.0"
+<span class="text-purple-400">user-invocable:</span> true
+<span class="text-purple-400">paths:</span> src/payments/**
+<span class="text-purple-400">hooks:</span>
+  PreToolUse: [...]
+<span class="text-purple-400">shell:</span>
+  interpreter: bash
+<span class="text-purple-400">---</span>
+# Markdown body with $variable substitution</code></pre>
+
+                <div class="dark:bg-dark-800 rounded-lg p-4 border border-purple-500/30">
+                    <h4 class="text-purple-400 font-bold text-sm mb-3">Frontmatter Field Reference</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b dark:border-gray-700">
+                                    <th class="text-left py-2 pr-4 dark:text-gray-300">Field</th>
+                                    <th class="text-left py-2 pr-4 dark:text-gray-300">Type</th>
+                                    <th class="text-left py-2 dark:text-gray-300">Purpose</th>
+                                </tr>
+                            </thead>
+                            <tbody class="dark:text-gray-400">
+                                <tr class="border-b dark:border-gray-800"><td class="py-1.5 pr-4 font-mono text-xs">name</td><td class="py-1.5 pr-4">string</td><td class="py-1.5">Override directory-derived name</td></tr>
+                                <tr class="border-b dark:border-gray-800"><td class="py-1.5 pr-4 font-mono text-xs">allowed-tools</td><td class="py-1.5 pr-4">list</td><td class="py-1.5">Tool permission patterns</td></tr>
+                                <tr class="border-b dark:border-gray-800"><td class="py-1.5 pr-4 font-mono text-xs">context</td><td class="py-1.5 pr-4">fork</td><td class="py-1.5">Isolated sub-agent execution</td></tr>
+                                <tr class="border-b dark:border-gray-800"><td class="py-1.5 pr-4 font-mono text-xs">model</td><td class="py-1.5 pr-4">string</td><td class="py-1.5">Model override for skill</td></tr>
+                                <tr class="border-b dark:border-gray-800"><td class="py-1.5 pr-4 font-mono text-xs">effort</td><td class="py-1.5 pr-4">low/med/high</td><td class="py-1.5">Thinking budget</td></tr>
+                                <tr class="border-b dark:border-gray-800"><td class="py-1.5 pr-4 font-mono text-xs">paths</td><td class="py-1.5 pr-4">glob</td><td class="py-1.5">Conditional activation by file pattern</td></tr>
+                                <tr><td class="py-1.5 pr-4 font-mono text-xs">disable-model-invocation</td><td class="py-1.5 pr-4">bool</td><td class="py-1.5">Block Skill tool invocation</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Argument Substitution -->
+        <section>
+            <div class="flex items-center gap-3 mb-6">
+                <span class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-sm font-bold flex-shrink-0">4</span>
+                <h2 class="text-2xl font-bold dark:text-white">Argument Substitution Pipeline</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 space-y-4">
+                <p class="dark:text-gray-300">A substituicao de argumentos segue uma pipeline de 6 passos em ordem definida. Se nenhum placeholder for encontrado, argumentos sao appended automaticamente.</p>
+
+                <div class="space-y-2">
+                    <div class="flex items-start gap-3 dark:bg-dark-800 rounded-lg p-3 border dark:border-gray-700/50">
+                        <span class="text-purple-400 font-mono text-xs font-bold mt-0.5">1</span>
+                        <div class="text-sm dark:text-gray-300"><strong>Named args:</strong> <code class="bg-purple-500/10 text-purple-400 px-1 rounded text-xs">$foo</code>, <code class="bg-purple-500/10 text-purple-400 px-1 rounded text-xs">$bar</code> (from <code class="text-xs">arguments</code> frontmatter)</div>
+                    </div>
+                    <div class="flex items-start gap-3 dark:bg-dark-800 rounded-lg p-3 border dark:border-gray-700/50">
+                        <span class="text-purple-400 font-mono text-xs font-bold mt-0.5">2</span>
+                        <div class="text-sm dark:text-gray-300"><strong>Indexed args:</strong> <code class="bg-purple-500/10 text-purple-400 px-1 rounded text-xs">$ARGUMENTS[0]</code>, <code class="bg-purple-500/10 text-purple-400 px-1 rounded text-xs">$0</code>, <code class="bg-purple-500/10 text-purple-400 px-1 rounded text-xs">$1</code></div>
+                    </div>
+                    <div class="flex items-start gap-3 dark:bg-dark-800 rounded-lg p-3 border dark:border-gray-700/50">
+                        <span class="text-purple-400 font-mono text-xs font-bold mt-0.5">3</span>
+                        <div class="text-sm dark:text-gray-300"><strong>Full arg string:</strong> <code class="bg-purple-500/10 text-purple-400 px-1 rounded text-xs">$ARGUMENTS</code></div>
+                    </div>
+                    <div class="flex items-start gap-3 dark:bg-dark-800 rounded-lg p-3 border dark:border-gray-700/50">
+                        <span class="text-purple-400 font-mono text-xs font-bold mt-0.5">4</span>
+                        <div class="text-sm dark:text-gray-300"><strong>Fallback:</strong> Se nenhum placeholder encontrado, args appended como <code class="bg-purple-500/10 text-purple-400 px-1 rounded text-xs">ARGUMENTS: ...</code></div>
+                    </div>
+                    <div class="flex items-start gap-3 dark:bg-dark-800 rounded-lg p-3 border dark:border-gray-700/50">
+                        <span class="text-purple-400 font-mono text-xs font-bold mt-0.5">5</span>
+                        <div class="text-sm dark:text-gray-300"><strong>Shell injection:</strong> <code class="bg-purple-500/10 text-purple-400 px-1 rounded text-xs">!`command`</code> ou blocos <code class="text-xs">```!</code> (local skills only)</div>
+                    </div>
+                    <div class="flex items-start gap-3 dark:bg-dark-800 rounded-lg p-3 border dark:border-gray-700/50">
+                        <span class="text-purple-400 font-mono text-xs font-bold mt-0.5">6</span>
+                        <div class="text-sm dark:text-gray-300"><strong>Special variables:</strong> <code class="bg-purple-500/10 text-purple-400 px-1 rounded text-xs">${CLAUDE_SKILL_DIR}</code>, <code class="bg-purple-500/10 text-purple-400 px-1 rounded text-xs">${CLAUDE_SESSION_ID}</code></div>
+                    </div>
+                </div>
+
+                <div class="dark:bg-dark-800 rounded-lg p-4 border border-purple-500/30 mt-4">
+                    <p class="text-sm dark:text-gray-300"><strong class="text-purple-400">Exemplo:</strong> <code class="text-xs">/myskill "hello world" foo</code> e parseado como <code class="text-xs">["hello world", "foo"]</code> via shell-quote parsing.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: MCP & Bundled Skills -->
+        <section>
+            <div class="flex items-center gap-3 mb-6">
+                <span class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-sm font-bold flex-shrink-0">5</span>
+                <h2 class="text-2xl font-bold dark:text-white">MCP Skills &amp; Bundled Skills</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50">
+                        <h4 class="text-purple-400 font-bold text-sm mb-3">MCP Skills (Remote)</h4>
+                        <ul class="text-sm dark:text-gray-400 space-y-1.5">
+                            <li>&#x26D4; <strong>No shell injection</strong> -- !backtick e ```! blocos silently skipped</li>
+                            <li>&#x26D4; <strong>${CLAUDE_SKILL_DIR} unavailable</strong> -- sem directory local</li>
+                            <li>&#x2705; Separate registry em <code class="text-xs">AppState.mcp.commands</code></li>
+                            <li>&#x2705; Merged via <code class="text-xs">getAllCommands()</code> at invocation</li>
+                            <li>&#x1F512; <em>"MCP skills are remote and untrusted"</em></li>
+                        </ul>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50">
+                        <h4 class="text-purple-400 font-bold text-sm mb-3">Bundled Skills (Built-in)</h4>
+                        <ul class="text-sm dark:text-gray-400 space-y-1.5">
+                            <li>&#x26A1; <code class="text-xs">/simplify</code> -- 3 parallel review agents</li>
+                            <li>&#x26A1; <code class="text-xs">/commit</code>, <code class="text-xs">/remember</code>, <code class="text-xs">/verify</code></li>
+                            <li>&#x26A1; <code class="text-xs">/debug</code>, <code class="text-xs">/stuck</code></li>
+                            <li>&#x26A1; <code class="text-xs">/skillify</code> -- writes SKILL.md (internal)</li>
+                            <li>&#x1F512; Secure nonce dirs (<code class="text-xs">O_EXCL | O_NOFOLLOW | 0o600</code>)</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <pre class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 overflow-x-auto text-sm"><code class="dark:text-gray-300"><span class="text-purple-400">registerBundledSkill</span>({
+  name: <span class="text-green-400">'simplify'</span>,
+  description: <span class="text-green-400">'Review changed code for reuse, quality, and efficiency.'</span>,
+  userInvocable: <span class="text-yellow-400">true</span>,
+  <span class="text-purple-400">async</span> getPromptForCommand(args) {
+    <span class="text-purple-400">return</span> [{ type: <span class="text-green-400">'text'</span>, text: SIMPLIFY_PROMPT }]
+  },
+})</code></pre>
+            </div>
+        </section>
+
+        <!-- Section 6: Permissions & Live Reloading -->
+        <section>
+            <div class="flex items-center gap-3 mb-6">
+                <span class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-sm font-bold flex-shrink-0">6</span>
+                <h2 class="text-2xl font-bold dark:text-white">Permissions, Auto-Allow &amp; Live Reloading</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 space-y-4">
+                <p class="dark:text-gray-300"><code class="bg-purple-500/10 text-purple-400 px-1.5 py-0.5 rounded text-sm">checkPermissions()</code> segue um waterfall de 5 passos:</p>
+
+                <div class="space-y-2">
+                    <div class="dark:bg-dark-800 rounded-lg p-3 border dark:border-gray-700/50 text-sm">
+                        <span class="text-red-400 font-bold">1. Deny rules:</span> <span class="dark:text-gray-400">Block se name ou prefix (:*) matches deny list</span>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-3 border dark:border-gray-700/50 text-sm">
+                        <span class="text-yellow-400 font-bold">2. Remote canonical:</span> <span class="dark:text-gray-400">Auto-allowed (experimental)</span>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-3 border dark:border-gray-700/50 text-sm">
+                        <span class="text-green-400 font-bold">3. Allow rules:</span> <span class="dark:text-gray-400">Proceed se explicit allow matches</span>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-3 border dark:border-gray-700/50 text-sm">
+                        <span class="text-blue-400 font-bold">4. Safe properties:</span> <span class="dark:text-gray-400">Auto-allow se sem allowed-tools, model override, hooks, ou paths</span>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-3 border dark:border-gray-700/50 text-sm">
+                        <span class="text-purple-400 font-bold">5. Ask user:</span> <span class="dark:text-gray-400">Prompt for permission with suggestions</span>
+                    </div>
+                </div>
+
+                <div class="dark:bg-dark-800 rounded-lg p-4 border border-purple-500/30 mt-4">
+                    <h4 class="text-purple-400 font-bold text-sm mb-2">Live Reloading</h4>
+                    <p class="text-sm dark:text-gray-400">O <code class="text-xs">skillChangeDetector</code> monitora directories com chokidar. Quando qualquer SKILL.md muda, debounce de 300ms, fire ConfigChange hooks, e limpa memoization caches. Em Bun, stat-polling substitui FSWatcher (deadlock bug).</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 7: Conditional Skills -->
+        <section>
+            <div class="flex items-center gap-3 mb-6">
+                <span class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-sm font-bold flex-shrink-0">7</span>
+                <h2 class="text-2xl font-bold dark:text-white">Conditional Skills &amp; Legacy Support</h2>
+            </div>
+
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 space-y-4">
+                <div class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50">
+                    <h4 class="text-purple-400 font-bold text-sm mb-2">Conditional Skills (paths-based)</h4>
+                    <p class="text-sm dark:text-gray-400 mb-3"><em>"A skill with a paths frontmatter field is a conditional skill. It is loaded at startup but not surfaced to Claude until the user opens or edits a file whose path matches one of the glob patterns."</em></p>
+                    <pre class="dark:bg-dark-950 rounded p-3 overflow-x-auto text-sm"><code class="dark:text-gray-300"><span class="text-purple-400">---</span>
+<span class="text-purple-400">paths:</span> src/payments/**
+<span class="text-purple-400">description:</span> "Stripe refund workflow"
+<span class="text-purple-400">---</span></code></pre>
+                    <p class="text-xs dark:text-gray-500 mt-2">Patterns usam .gitignore syntax. Um <code class="text-xs">**</code> pattern e tratado como unconditional.</p>
+                </div>
+
+                <div class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50">
+                    <h4 class="text-purple-400 font-bold text-sm mb-2">Legacy Support</h4>
+                    <p class="text-sm dark:text-gray-400">O diretorio antigo <code class="text-xs">/commands/</code> (<code class="text-xs">.claude/commands/</code>) ainda funciona com single <code class="text-xs">.md</code> files e <code class="text-xs">skill-name/SKILL.md</code> format, mas novo trabalho deve usar <code class="text-xs">.claude/skills/</code>.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary -->
+        <section>
+            <div class="dark:bg-dark-900 rounded-xl border border-purple-500/30 p-6">
+                <h3 class="text-xl font-bold text-purple-400 mb-4">&#x1F4CB; Resumo do Modulo</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="flex items-start gap-2 text-sm dark:text-gray-300">
+                        <span class="text-purple-400 mt-0.5">&#x2714;</span>
+                        <span>Skills vivem em <code class="text-xs">skill-name/SKILL.md</code>; directory name vira slash command</span>
+                    </div>
+                    <div class="flex items-start gap-2 text-sm dark:text-gray-300">
+                        <span class="text-purple-400 mt-0.5">&#x2714;</span>
+                        <span>4 fontes: managed > user > project > bundled</span>
+                    </div>
+                    <div class="flex items-start gap-2 text-sm dark:text-gray-300">
+                        <span class="text-purple-400 mt-0.5">&#x2714;</span>
+                        <span>2 modos de execucao: inline (same context) ou forked (isolated)</span>
+                    </div>
+                    <div class="flex items-start gap-2 text-sm dark:text-gray-300">
+                        <span class="text-purple-400 mt-0.5">&#x2714;</span>
+                        <span>MCP skills nunca executam shell injection (hard security boundary)</span>
+                    </div>
+                    <div class="flex items-start gap-2 text-sm dark:text-gray-300">
+                        <span class="text-purple-400 mt-0.5">&#x2714;</span>
+                        <span>paths frontmatter faz skills condicionais (invisiveis ate matching file)</span>
+                    </div>
+                    <div class="flex items-start gap-2 text-sm dark:text-gray-300">
+                        <span class="text-purple-400 mt-0.5">&#x2714;</span>
+                        <span>Skill listing capped em 1% do context window</span>
+                    </div>
+                    <div class="flex items-start gap-2 text-sm dark:text-gray-300">
+                        <span class="text-purple-400 mt-0.5">&#x2714;</span>
+                        <span>Simple skills auto-approved; powerful skills precisam allow rules</span>
+                    </div>
+                    <div class="flex items-start gap-2 text-sm dark:text-gray-300">
+                        <span class="text-purple-400 mt-0.5">&#x2714;</span>
+                        <span>Files watched live; no restart needed (chokidar 300ms debounce)</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Navigation -->
+        <div class="flex items-center justify-between pt-8 border-t dark:border-gray-800">
+            <a href="../trilha3/" class="flex items-center gap-2 dark:text-gray-400 hover:text-purple-400 transition-colors">
+                <span>&#x2190;</span> Trilha 3
+            </a>
+            <a href="modulo-3-2.html" class="flex items-center gap-2 text-purple-400 hover:text-purple-300 transition-colors">
+                3.2 Agent System <span>&#x2192;</span>
+            </a>
+        </div>
+    </main>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { primaryColor: '#7c3aed', primaryTextColor: '#e2e8f0', primaryBorderColor: '#7c3aed', lineColor: '#64748b', secondaryColor: '#1e293b', tertiaryColor: '#0f172a' }});
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.classList.contains('dark');
+            html.classList.toggle('dark', !isDark);
+            html.classList.toggle('light', isDark);
+            localStorage.setItem('theme', isDark ? 'light' : 'dark');
+        }
+
+        (function() {
+            const saved = localStorage.getItem('theme');
+            if (saved === 'light') {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+            }
+        })();
+    </script>
+</body>
+</html>
