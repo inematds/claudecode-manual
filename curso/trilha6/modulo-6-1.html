@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>6.1 Bridge &amp; Remote Control - Claude Code Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true, theme:'dark'});</script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        dark: { 800: '#1e293b', 900: '#0f172a', 950: '#020617' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html.light { background: #f8fafc; color: #1e293b; }
+        html.light .dark\:bg-dark-950 { background: #f8fafc !important; }
+        html.light .dark\:bg-dark-900 { background: #ffffff !important; }
+        html.light .dark\:bg-dark-800 { background: #f1f5f9 !important; }
+        html.light .dark\:bg-dark-900\/50 { background: rgba(255,255,255,0.8) !important; }
+        html.light .dark\:bg-dark-800\/50 { background: rgba(241,245,249,0.8) !important; }
+        html.light .dark\:text-white { color: #1e293b !important; }
+        html.light .dark\:text-gray-100 { color: #334155 !important; }
+        html.light .dark\:text-gray-300 { color: #475569 !important; }
+        html.light .dark\:text-gray-400 { color: #64748b !important; }
+        html.light .dark\:text-gray-500 { color: #94a3b8 !important; }
+        html.light .dark\:border-gray-700 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-800 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-700\/50 { border-color: rgba(226,232,240,0.5) !important; }
+        html.light .text-rose-400 { color: #9f1239 !important; }
+        html.light .text-rose-500 { color: #9f1239 !important; }
+        html.light .bg-rose-500\/10 { background: rgba(159,18,57,0.08) !important; }
+        html.light .bg-rose-500\/20 { background: rgba(159,18,57,0.12) !important; }
+        html.light .border-rose-500\/30 { border-color: rgba(159,18,57,0.2) !important; }
+        html.light .from-rose-900\/30 { --tw-gradient-from: rgba(159,18,57,0.08) !important; }
+        html.light nav { background: rgba(255,255,255,0.85) !important; border-bottom: 1px solid #e2e8f0 !important; }
+        html.light .dark\:hover\:bg-dark-800:hover { background: #e2e8f0 !important; }
+        html.light pre { background: #f1f5f9 !important; border-color: #e2e8f0 !important; }
+        html.light code { color: #1e293b !important; }
+    </style>
+</head>
+<body class="dark:bg-dark-950 dark:text-white font-sans min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-40 backdrop-blur-xl dark:bg-dark-900/50 border-b dark:border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
+            <a href="../../index.html" class="text-yellow-400 font-bold text-lg whitespace-nowrap">&#x1F4BB; Claude Code Deep Dive</a>
+            <span class="dark:text-gray-600">|</span>
+            <a href="https://inema.club" target="_blank" class="text-sky-400 text-sm font-medium hover:underline">INEMA.CLUB</a>
+            <div class="flex items-center gap-1 ml-auto flex-wrap">
+                <a href="../trilha1/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Core Architecture</span><span class="md:hidden">T1</span></a>
+                <a href="../trilha2/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Tool System</span><span class="md:hidden">T2</span></a>
+                <a href="../trilha3/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Agent Intelligence</span><span class="md:hidden">T3</span></a>
+                <a href="../trilha4/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Interface</span><span class="md:hidden">T4</span></a>
+                <a href="../trilha5/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Infrastructure</span><span class="md:hidden">T5</span></a>
+                <a href="../trilha6/" class="px-2 py-1 text-xs font-bold rounded bg-rose-500/20 text-rose-400 border border-rose-500/30"><span class="hidden md:inline">Connectivity</span><span class="md:hidden">T6</span></a>
+                <a href="../trilha7/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Unreleased Features</span><span class="md:hidden">T7</span></a>
+                <a href="../trilha8/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Big Picture</span><span class="md:hidden">T8</span></a>
+                <button onclick="toggleTheme()" class="ml-2 p-2 rounded-lg dark:hover:bg-dark-800 dark:text-gray-400" title="Alternar tema">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <div class="max-w-5xl mx-auto px-4 pt-6 pb-2">
+        <nav class="flex items-center gap-2 text-sm dark:text-gray-400">
+            <a href="../../index.html" class="hover:text-rose-400 transition-colors">Inicio</a>
+            <span>/</span>
+            <a href="./" class="hover:text-rose-400 transition-colors">Trilha 6</a>
+            <span>/</span>
+            <span class="text-rose-400 font-medium">Modulo 6.1</span>
+        </nav>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-gradient-to-b from-rose-900/30 to-transparent py-12 px-4">
+        <div class="max-w-5xl mx-auto">
+            <span class="inline-block px-3 py-1 text-xs font-bold uppercase tracking-wider text-rose-400 bg-rose-500/10 rounded-full border border-rose-500/30 mb-4">MODULO 6.1</span>
+            <h1 class="text-3xl md:text-4xl font-extrabold mb-3">&#x1F309; Bridge &amp; Remote Control</h1>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-xl">
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-rose-400">6</div>
+                    <div class="text-xs dark:text-gray-400">Topicos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-rose-400">~60</div>
+                    <div class="text-xs dark:text-gray-400">Minutos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-rose-400">Deep</div>
+                    <div class="text-xs dark:text-gray-400">Nivel</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-rose-400">Source</div>
+                    <div class="text-xs dark:text-gray-400">Tipo</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 pb-20">
+
+        <!-- Topic 1 -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-rose-500/30">1</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F30D; Architecture Overview</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <div class="space-y-4 mb-6">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-rose-500">
+                        <h4 class="font-bold text-rose-400 mb-1">Outbound (local &rarr; cloud)</h4>
+                        <p class="dark:text-gray-300 text-sm">Claude's messages, tool activities, and result events stream to CCR for real-time rendering on claude.ai.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-rose-500">
+                        <h4 class="font-bold text-rose-400 mb-1">Inbound (cloud &rarr; local)</h4>
+                        <p class="dark:text-gray-300 text-sm">User prompts, permission decisions, interrupt signals, and control messages flow back to the Claude process.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-rose-500">
+                        <h4 class="font-bold text-rose-400 mb-1">Auth Boundary</h4>
+                        <p class="dark:text-gray-300 text-sm">Bridge API calls use OAuth token. CCR worker endpoints validate a short-lived JWT encoding session_id and role=worker claims.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- Topic 2 -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-rose-500/30">2</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F504; Bridge v1 vs v2</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <div class="space-y-4 mb-6">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-rose-500">
+                        <h4 class="font-bold text-rose-400 mb-1">v1 &mdash; Environment-based</h4>
+                        <p class="dark:text-gray-300 text-sm">Registers via POST /v1/environments, polls for work, decodes WorkSecret (base64url JSON), supports perpetual mode and multi-session spawn. Transport: HybridTransport (WebSocket reads + HTTP POSTs).</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-rose-500">
+                        <h4 class="font-bold text-rose-400 mb-1">v2 &mdash; Environment-less</h4>
+                        <p class="dark:text-gray-300 text-sm">No Environments API. POST /v1/code/sessions &rarr; session ID. POST /v1/code/sessions/{id}/bridge &rarr; worker JWT + epoch. Transport: SSETransport (reads) + CCRClient (writes). Gated by tengu_bridge_repl_v2 GrowthBook flag.</p>
+                    </div>
+                </div>
+            </div>            <div class="dark:bg-dark-900 rounded-xl border border-rose-500/30 p-6 mb-6 bg-gradient-to-r from-rose-500/5 to-transparent">
+                <h4 class="font-bold text-rose-400 mb-2">&#x1F4A1; WorkSecret Decode</h4>
+                <p class="dark:text-gray-300 text-sm">When the Environments API delivers work, it attaches an opaque secret field that is a base64url-encoded JSON blob containing session_ingress_token (JWT), api_base_url, sources, and auth arrays.</p>
+            </div>
+        </section>
+        <!-- Topic 3 -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-rose-500/30">3</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F50C; Transport Layer</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <div class="space-y-4 mb-6">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-rose-500">
+                        <h4 class="font-bold text-rose-400 mb-1">ReplBridgeTransport Interface</h4>
+                        <p class="dark:text-gray-300 text-sm">Unified interface: write(), writeBatch(), close(), isConnectedStatus(), setOnData(), connect(), getLastSequenceNum(), flush(). v2 adds reportState(), reportMetadata(), reportDelivery().</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-rose-500">
+                        <h4 class="font-bold text-rose-400 mb-1">v1 HybridTransport</h4>
+                        <p class="dark:text-gray-300 text-sm">WebSocket for inbound, HTTP POST for outbound. v1 never uses SSE sequence numbers &mdash; server-side cursor handles replay.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-rose-500">
+                        <h4 class="font-bold text-rose-400 mb-1">v2 SSETransport + CCRClient</h4>
+                        <p class="dark:text-gray-300 text-sm">Asymmetric: reads via SSE, writes via CCRClient posting to /worker/events. ACK 'processed' immediately to prevent phantom prompt floods.</p>
+                    </div>
+                </div>
+            </div>            <div class="dark:bg-dark-900 rounded-xl border border-rose-500/30 p-6 mb-6 bg-gradient-to-r from-rose-500/5 to-transparent">
+                <h4 class="font-bold text-rose-400 mb-2">&#x1F4A1; FlushGate</h4>
+                <p class="dark:text-gray-300 text-sm">Prevents history/live message interleaving. Historical messages are flushed as one HTTP batch on connect; live messages arriving during that window are queued and drained after flush completes.</p>
+            </div>
+        </section>
+        <!-- Topic 4 -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-rose-500/30">4</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F512; Permission Bridge</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4">Remote Control surfaces tool-use permission prompts through the control_request / control_response protocol. When Claude wants to run a potentially dangerous tool, the question travels through the bridge to claude.ai.</p>
+            </div>            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <div class="space-y-4 mb-6">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-rose-500">
+                        <h4 class="font-bold text-rose-400 mb-1">control_request</h4>
+                        <p class="dark:text-gray-300 text-sm">Bridge asks claude.ai 'can this tool run?'</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-rose-500">
+                        <h4 class="font-bold text-rose-400 mb-1">control_response</h4>
+                        <p class="dark:text-gray-300 text-sm">claude.ai answers allow/deny, optionally with updated input.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-rose-500">
+                        <h4 class="font-bold text-rose-400 mb-1">Synthetic AssistantMessage</h4>
+                        <p class="dark:text-gray-300 text-sm">When a permission request comes from remote CCR, no local message exists. remotePermissionBridge.ts fabricates one with tool stubs for unknown MCP tools.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- Topic 5 -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-rose-500/30">5</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x2699;&#xFE0F; Remote Control Command</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4">The /remote-control slash command checks if a bridge is already connected, runs pre-flight checks (checkBridgePrerequisites), then sets replBridgeEnabled: true in AppState.</p>
+            </div>            <div class="dark:bg-dark-900 rounded-xl border border-rose-500/30 p-6 mb-6 bg-gradient-to-r from-rose-500/5 to-transparent">
+                <h4 class="font-bold text-rose-400 mb-2">&#x1F4A1; Five Entitlement Gates</h4>
+                <p class="dark:text-gray-300 text-sm">Runtime gate (GrowthBook flag + OAuth sub), OAuth token present, Organization policy (allow_remote_control), Token freshness (proactive refresh), Min version check. If any gate fails, onStateChange 'failed' is called.</p>
+            </div>
+        </section>
+        <!-- Topic 6 -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-rose-500/30">6</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F4E1; CCR Integration</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <div class="space-y-4 mb-6">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-rose-500">
+                        <h4 class="font-bold text-rose-400 mb-1">SessionsWebSocket</h4>
+                        <p class="dark:text-gray-300 text-sm">Connects to wss://api.anthropic.com/v1/sessions/ws/{sessionId}/subscribe for real-time event stream.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-rose-500">
+                        <h4 class="font-bold text-rose-400 mb-1">SDKMessage Adapter</h4>
+                        <p class="dark:text-gray-300 text-sm">Translates SDK-format messages (assistant, stream_event, result, system) to REPL's internal Message type.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-rose-500">
+                        <h4 class="font-bold text-rose-400 mb-1">Standalone Bridge</h4>
+                        <p class="dark:text-gray-300 text-sm">claude remote-control server mode manages concurrent child Claude processes with configurable pool size (default 32) and 24h per-session timeout.</p>
+                    </div>
+                </div>
+            </div>            <div class="dark:bg-dark-900 rounded-xl border border-rose-500/30 p-6 mb-6 bg-gradient-to-r from-rose-500/5 to-transparent">
+                <h4 class="font-bold text-rose-400 mb-2">&#x1F4A1; Session ID Compatibility</h4>
+                <p class="dark:text-gray-300 text-sm">Infrastructure uses cse_* IDs; frontend uses session_*. Both are the same UUID with different prefixes. sameSessionId() compares by UUID body.</p>
+            </div>
+        </section>
+
+        <!-- Summary -->
+        <section class="mb-16">
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6">
+                <h3 class="text-xl font-bold text-rose-400 mb-4">&#x1F4CB; Resumo do Modulo</h3>
+                <div class="space-y-3">
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-rose-400 mt-0.5">&#x2705;</span>
+                        <span>Two bridge architectures coexist: v1 (env-based poll/ack/heartbeat) and v2 (env-less, direct OAuth to worker JWT via POST /bridge).</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-rose-400 mt-0.5">&#x2705;</span>
+                        <span>Transport is asymmetric in v2: inbound uses SSE with sequence numbers, outbound uses CCRClient posting to /worker/events.</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-rose-400 mt-0.5">&#x2705;</span>
+                        <span>FlushGate prevents history/live message interleaving during session initialization.</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-rose-400 mt-0.5">&#x2705;</span>
+                        <span>Permission flow is bidirectional: control_request travels from Claude to server to claude.ai; control_response travels back.</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-rose-400 mt-0.5">&#x2705;</span>
+                        <span>Session IDs have two costumes: cse_* (infra) and session_* (frontend). sameSessionId() compares UUID body.</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-rose-400 mt-0.5">&#x2705;</span>
+                        <span>Auth for worker endpoints requires JWT, not OAuth. Token refresh triggers server re-dispatch.</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Navigation -->
+        <div class="flex items-center justify-between">
+            <a href="./" class="flex items-center gap-2 dark:text-gray-400 hover:text-rose-400 transition-colors"><span>&#x2190;</span> Voltar</a>
+            <a href="modulo-6-2.html" class="flex items-center gap-2 text-rose-400 hover:text-rose-300 transition-colors font-medium">Proximo <span>&#x2192;</span></a>
+        </div>
+
+    </main>
+
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.classList.contains('dark');
+            html.classList.toggle('dark', !isDark);
+            html.classList.toggle('light', isDark);
+            localStorage.setItem('theme', isDark ? 'light' : 'dark');
+        }
+        (function() {
+            const saved = localStorage.getItem('theme');
+            if (saved === 'light') {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+            }
+        })();
+    </script>
+</body>
+</html>

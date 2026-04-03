@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8.3 Message Processing - Claude Code Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true, theme:'dark'});</script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        dark: { 800: '#1e293b', 900: '#0f172a', 950: '#020617' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html.light { background: #f8fafc; color: #1e293b; }
+        html.light .dark\:bg-dark-950 { background: #f8fafc !important; }
+        html.light .dark\:bg-dark-900 { background: #ffffff !important; }
+        html.light .dark\:bg-dark-800 { background: #f1f5f9 !important; }
+        html.light .dark\:bg-dark-900\/50 { background: rgba(255,255,255,0.8) !important; }
+        html.light .dark\:bg-dark-800\/50 { background: rgba(241,245,249,0.8) !important; }
+        html.light .dark\:text-white { color: #1e293b !important; }
+        html.light .dark\:text-gray-100 { color: #334155 !important; }
+        html.light .dark\:text-gray-300 { color: #475569 !important; }
+        html.light .dark\:text-gray-400 { color: #64748b !important; }
+        html.light .dark\:text-gray-500 { color: #94a3b8 !important; }
+        html.light .dark\:border-gray-700 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-800 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-700\/50 { border-color: rgba(226,232,240,0.5) !important; }
+        html.light .text-indigo-400 { color: #4f46e5 !important; }
+        html.light .text-indigo-500 { color: #4f46e5 !important; }
+        html.light .bg-indigo-500\/10 { background: rgba(79,70,229,0.08) !important; }
+        html.light .bg-indigo-500\/20 { background: rgba(79,70,229,0.12) !important; }
+        html.light .border-indigo-500\/30 { border-color: rgba(79,70,229,0.2) !important; }
+        html.light .from-indigo-900\/30 { --tw-gradient-from: rgba(79,70,229,0.08) !important; }
+        html.light nav { background: rgba(255,255,255,0.85) !important; border-bottom: 1px solid #e2e8f0 !important; }
+        html.light .dark\:hover\:bg-dark-800:hover { background: #e2e8f0 !important; }
+        html.light pre { background: #f1f5f9 !important; border-color: #e2e8f0 !important; }
+        html.light code { color: #1e293b !important; }
+    </style>
+</head>
+<body class="dark:bg-dark-950 dark:text-white font-sans min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-40 backdrop-blur-xl dark:bg-dark-900/50 border-b dark:border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
+            <a href="../../index.html" class="text-yellow-400 font-bold text-lg whitespace-nowrap">&#x1F4BB; Claude Code Deep Dive</a>
+            <span class="dark:text-gray-600">|</span>
+            <a href="https://inema.club" target="_blank" class="text-sky-400 text-sm font-medium hover:underline">INEMA.CLUB</a>
+            <div class="flex items-center gap-1 ml-auto flex-wrap">
+                <a href="../trilha1/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Core Architecture</span><span class="md:hidden">T1</span></a>
+                <a href="../trilha2/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Tool System</span><span class="md:hidden">T2</span></a>
+                <a href="../trilha3/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Agent Intelligence</span><span class="md:hidden">T3</span></a>
+                <a href="../trilha4/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Interface</span><span class="md:hidden">T4</span></a>
+                <a href="../trilha5/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Infrastructure</span><span class="md:hidden">T5</span></a>
+                <a href="../trilha6/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Connectivity</span><span class="md:hidden">T6</span></a>
+                <a href="../trilha7/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Unreleased Features</span><span class="md:hidden">T7</span></a>
+                <a href="../trilha8/" class="px-2 py-1 text-xs font-bold rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"><span class="hidden md:inline">The Big Picture</span><span class="md:hidden">T8</span></a>
+                <button onclick="toggleTheme()" class="ml-2 p-2 rounded-lg dark:hover:bg-dark-800 dark:text-gray-400" title="Alternar tema">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <div class="max-w-5xl mx-auto px-4 pt-6 pb-2">
+        <nav class="flex items-center gap-2 text-sm dark:text-gray-400">
+            <a href="../../index.html" class="hover:text-indigo-400 transition-colors">Inicio</a>
+            <span>/</span>
+            <a href="./" class="hover:text-indigo-400 transition-colors">Trilha 8</a>
+            <span>/</span>
+            <span class="text-indigo-400 font-medium">Modulo 8.3</span>
+        </nav>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-gradient-to-b from-indigo-900/30 to-transparent py-12 px-4">
+        <div class="max-w-5xl mx-auto">
+            <span class="inline-block px-3 py-1 text-xs font-bold uppercase tracking-wider text-indigo-400 bg-indigo-500/10 rounded-full border border-indigo-500/30 mb-4">MODULO 8.3</span>
+            <h1 class="text-3xl md:text-4xl font-extrabold mb-3">&#x1F4E8; Message Processing</h1>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-xl">
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-indigo-400">6</div>
+                    <div class="text-xs dark:text-gray-400">Topicos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-indigo-400">~60</div>
+                    <div class="text-xs dark:text-gray-400">Minutos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-indigo-400">Deep</div>
+                    <div class="text-xs dark:text-gray-400">Nivel</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-indigo-400">Source</div>
+                    <div class="text-xs dark:text-gray-400">Tipo</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 pb-20">
+
+        <!-- Topic 1 -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-indigo-500/30">1</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F4CB; Pipeline Overview</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <div class="space-y-4 mb-6">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-indigo-500">
+                        <h4 class="font-bold text-indigo-400 mb-1">Stage 1: Submit &amp; Route</h4>
+                        <p class="dark:text-gray-300 text-sm">handlePromptSubmit handles validation, exit-word handling, queue vs immediate.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-indigo-500">
+                        <h4 class="font-bold text-indigo-400 mb-1">Stage 2: Input Classification</h4>
+                        <p class="dark:text-gray-300 text-sm">processUserInput manages image resize, slash/bash/text branching, hooks.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-indigo-500">
+                        <h4 class="font-bold text-indigo-400 mb-1">Stage 3: Message Construction</h4>
+                        <p class="dark:text-gray-300 text-sm">processTextPrompt and createUserMessage build typed UserMessage objects.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-indigo-500">
+                        <h4 class="font-bold text-indigo-400 mb-1">Stage 4: API Normalization</h4>
+                        <p class="dark:text-gray-300 text-sm">normalizeMessagesForAPI flattens, deduplicates, strips virtual messages.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- Topic 2 -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-indigo-500/30">2</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F680; Stage 1: handlePromptSubmit</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4">Two execution paths: queue processor (pre-validated commands) and direct input (reference expansion, exit checking, queue guard). Immediate commands (/config, /doctor) can execute while query is in progress.</p>
+            </div>            <div class="dark:bg-dark-900 rounded-xl border border-indigo-500/30 p-6 mb-6 bg-gradient-to-r from-indigo-500/5 to-transparent">
+                <h4 class="font-bold text-indigo-400 mb-2">&#x1F4A1; Concurrency</h4>
+                <p class="dark:text-gray-300 text-sm">Queue guard reserves BEFORE processUserInput starts, preventing race conditions during awaits.</p>
+            </div>
+        </section>
+        <!-- Topic 3 -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-indigo-500/30">3</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F50D; Stage 2: processUserInput</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4">Images resize in parallel via Promise.all. Three-way branch: bash mode, slash command, text prompt. Hidden fourth branch: ultraplan keyword rewrites to /ultraplan.</p>
+            </div>            <div class="dark:bg-dark-900 rounded-xl border border-indigo-500/30 p-6 mb-6 bg-gradient-to-r from-indigo-500/5 to-transparent">
+                <h4 class="font-bold text-indigo-400 mb-2">&#x1F4A1; Bridge Safety</h4>
+                <p class="dark:text-gray-300 text-sm">Messages from iOS/web arrive with skipSlashCommands: true. bridgeOrigin flag allows known-safe commands through while blocking unsafe ones.</p>
+            </div>
+        </section>
+        <!-- Topic 4 -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-indigo-500/30">4</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F4DD; Stage 3: Message Construction</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4">createUserMessage stamps: uuid (stable identity), isMeta (model-visible but hidden from transcript), origin (provenance), permissionMode (safety snapshot), toolUseResult, imagePasteIds.</p>
+            </div>            <div class="dark:bg-dark-900 rounded-xl border border-indigo-500/30 p-6 mb-6 bg-gradient-to-r from-indigo-500/5 to-transparent">
+                <h4 class="font-bold text-indigo-400 mb-2">&#x1F4A1; isMeta Messages</h4>
+                <p class="dark:text-gray-300 text-sm">Image metadata messages (dimensions, source path) sent to model but hidden from UI. Gives spatial context without polluting transcript.</p>
+            </div>
+        </section>
+        <!-- Topic 5 -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-indigo-500/30">5</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x2699;&#xFE0F; Stage 4: API Normalization</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <div class="space-y-4 mb-6">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-indigo-500">
+                        <h4 class="font-bold text-indigo-400 mb-1">Reorder attachments</h4>
+                        <p class="dark:text-gray-300 text-sm">Bubble up until hitting tool result or assistant boundary.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-indigo-500">
+                        <h4 class="font-bold text-indigo-400 mb-1">Strip virtual messages</h4>
+                        <p class="dark:text-gray-300 text-sm">Display-only messages never reach the API.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-indigo-500">
+                        <h4 class="font-bold text-indigo-400 mb-1">Merge consecutive same-role</h4>
+                        <p class="dark:text-gray-300 text-sm">API requires strict alternating user/assistant turns.</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-indigo-500">
+                        <h4 class="font-bold text-indigo-400 mb-1">Tool result pairing</h4>
+                        <p class="dark:text-gray-300 text-sm">Every tool_use must have matching tool_result. Orphans get SYNTHETIC_TOOL_RESULT_PLACEHOLDER.</p>
+                    </div>
+                </div>
+            </div>            <div class="dark:bg-dark-900 rounded-xl border border-indigo-500/30 p-6 mb-6 bg-gradient-to-r from-indigo-500/5 to-transparent">
+                <h4 class="font-bold text-indigo-400 mb-2">&#x1F4A1; Training Data Guard</h4>
+                <p class="dark:text-gray-300 text-sm">SYNTHETIC_TOOL_RESULT_PLACEHOLDER exported so HFI submission path can detect and reject payloads with fake tool results.</p>
+            </div>
+        </section>
+        <!-- Topic 6 -->
+        <section class="mb-16">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-indigo-500/30">6</div>
+                <h2 class="text-2xl font-bold dark:text-white">&#x1F4CA; Message Taxonomy &amp; Hooks</h2>
+            </div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4">Six message types: UserMessage, AssistantMessage, AttachmentMessage, SystemMessage, ProgressMessage, TombstoneMessage. UserPromptSubmit hooks run after classification, before API call - can block, annotate, or stop any prompt.</p>
+            </div>            <div class="dark:bg-dark-900 rounded-xl border border-indigo-500/30 p-6 mb-6 bg-gradient-to-r from-indigo-500/5 to-transparent">
+                <h4 class="font-bold text-indigo-400 mb-2">&#x1F4A1; Memory Correction Hint</h4>
+                <p class="dark:text-gray-300 text-sm">When auto-memory enabled, rejection/cancellation messages get postscript nudging model to save user preferences to memory.</p>
+            </div>
+        </section>
+
+        <!-- Summary -->
+        <section class="mb-16">
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6">
+                <h3 class="text-xl font-bold text-indigo-400 mb-4">&#x1F4CB; Resumo do Modulo</h3>
+                <div class="space-y-3">
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-indigo-400 mt-0.5">&#x2705;</span>
+                        <span>Every submission normalizes through QueuedCommand shape so direct and queue paths share execution logic.</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-indigo-400 mt-0.5">&#x2705;</span>
+                        <span>Pipeline has four mode branches: bash, slash command, ultraplan keyword (hidden), plain text.</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-indigo-400 mt-0.5">&#x2705;</span>
+                        <span>Images resize twice - once during inline-block normalization and again for pasted clipboard content.</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-indigo-400 mt-0.5">&#x2705;</span>
+                        <span>UserPromptSubmit hooks run after classification but before API call, with blocking and injection capabilities.</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-indigo-400 mt-0.5">&#x2705;</span>
+                        <span>normalizeMessagesForAPI is final gatekeeper - strips virtual messages, merges same-role turns, ensures tool pairing.</span>
+                    </div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm">
+                        <span class="text-indigo-400 mt-0.5">&#x2705;</span>
+                        <span>Synthetic message constants double as training data guards via HFI rejection.</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Navigation -->
+        <div class="flex items-center justify-between">
+            <a href="modulo-8-2.html" class="flex items-center gap-2 dark:text-gray-400 hover:text-indigo-400 transition-colors"><span>&#x2190;</span> Voltar</a>
+            <a href="modulo-8-4.html" class="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors font-medium">Proximo <span>&#x2192;</span></a>
+        </div>
+
+    </main>
+
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.classList.contains('dark');
+            html.classList.toggle('dark', !isDark);
+            html.classList.toggle('light', isDark);
+            localStorage.setItem('theme', isDark ? 'light' : 'dark');
+        }
+        (function() {
+            const saved = localStorage.getItem('theme');
+            if (saved === 'light') {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+            }
+        })();
+    </script>
+</body>
+</html>
