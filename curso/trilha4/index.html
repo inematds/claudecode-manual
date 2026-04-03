@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T4 The Interface - Claude Code Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: { 400: '#fbbf24', 500: '#f59e0b', 600: '#d97706', 700: '#b45309', 800: '#92400e', 900: '#78350f' },
+                        dark: { 800: '#1e293b', 900: '#0f172a', 950: '#020617' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html.light { background: #f8fafc; color: #1e293b; }
+        html.light .dark\:bg-dark-950 { background: #f8fafc !important; }
+        html.light .dark\:bg-dark-900 { background: #ffffff !important; }
+        html.light .dark\:bg-dark-800 { background: #f1f5f9 !important; }
+        html.light .dark\:bg-dark-900\/50 { background: rgba(255,255,255,0.8) !important; }
+        html.light .dark\:bg-dark-800\/50 { background: rgba(241,245,249,0.8) !important; }
+        html.light .dark\:text-white { color: #1e293b !important; }
+        html.light .dark\:text-gray-100 { color: #334155 !important; }
+        html.light .dark\:text-gray-300 { color: #475569 !important; }
+        html.light .dark\:text-gray-400 { color: #64748b !important; }
+        html.light .dark\:text-gray-500 { color: #94a3b8 !important; }
+        html.light .dark\:border-gray-700 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-800 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-700\/50 { border-color: rgba(226,232,240,0.5) !important; }
+        html.light .text-amber-400 { color: #92400e !important; }
+        html.light .text-amber-500 { color: #b45309 !important; }
+        html.light .bg-amber-500\/10 { background: rgba(180,83,9,0.08) !important; }
+        html.light .bg-amber-500\/20 { background: rgba(180,83,9,0.12) !important; }
+        html.light .border-amber-500\/30 { border-color: rgba(180,83,9,0.2) !important; }
+        html.light .from-amber-900\/30 { --tw-gradient-from: rgba(180,83,9,0.08) !important; }
+        html.light .dark\:bg-gradient-to-b { background: #f8fafc !important; }
+        html.light nav { background: rgba(255,255,255,0.85) !important; border-bottom: 1px solid #e2e8f0 !important; }
+        html.light .dark\:hover\:bg-dark-800:hover { background: #e2e8f0 !important; }
+    </style>
+</head>
+<body class="dark:bg-dark-950 dark:text-white font-sans min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-40 backdrop-blur-xl dark:bg-dark-900/50 border-b dark:border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
+            <a href="../../index.html" class="text-yellow-400 font-bold text-lg whitespace-nowrap">&#x1F4BB; Claude Code Deep Dive</a>
+            <span class="dark:text-gray-600">|</span>
+            <a href="https://inema.club" target="_blank" class="text-sky-400 text-sm font-medium hover:underline">INEMA.CLUB</a>
+            <div class="flex items-center gap-1 ml-auto flex-wrap">
+                <a href="../trilha1/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Core Architecture</span><span class="md:hidden">T1</span></a>
+                <a href="../trilha2/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Tool System</span><span class="md:hidden">T2</span></a>
+                <a href="../trilha3/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Agent Intelligence</span><span class="md:hidden">T3</span></a>
+                <a href="../trilha4/" class="px-2 py-1 text-xs font-bold rounded bg-amber-500/20 text-amber-400 border border-amber-500/30"><span class="hidden md:inline">The Interface</span><span class="md:hidden">T4</span></a>
+                <a href="../trilha5/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Infrastructure</span><span class="md:hidden">T5</span></a>
+                <a href="../trilha6/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Connectivity</span><span class="md:hidden">T6</span></a>
+                <a href="../trilha7/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Unreleased Features</span><span class="md:hidden">T7</span></a>
+                <a href="../trilha8/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Big Picture</span><span class="md:hidden">T8</span></a>
+                <button onclick="toggleTheme()" class="ml-2 p-2 rounded-lg dark:hover:bg-dark-800 dark:text-gray-400" title="Alternar tema">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Header -->
+    <header class="bg-gradient-to-b from-amber-900/30 to-transparent py-16 px-4">
+        <div class="max-w-5xl mx-auto text-center">
+            <span class="inline-block px-3 py-1 text-xs font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 rounded-full border border-amber-500/30 mb-4">TRILHA 4</span>
+            <h1 class="text-4xl md:text-5xl font-extrabold mb-4">&#x1F5A5;&#xFE0F; The Interface</h1>
+            <p class="text-lg dark:text-gray-300 max-w-2xl mx-auto mb-8">Domine o rendering engine Ink, o sistema de comandos, dialogs, notificacoes, vim mode, keybindings, fullscreen e o sistema de temas do Claude Code.</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-xl mx-auto">
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-amber-400">8</div>
+                    <div class="text-xs dark:text-gray-400">Modulos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-amber-400">~48</div>
+                    <div class="text-xs dark:text-gray-400">Topicos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-amber-400">~6h</div>
+                    <div class="text-xs dark:text-gray-400">Duracao</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-amber-400">Avancado</div>
+                    <div class="text-xs dark:text-gray-400">Nivel</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 pb-20">
+
+        <!-- Quick Nav -->
+        <section class="mb-16">
+            <h2 class="text-xl font-bold mb-6 dark:text-gray-100">Navegacao Rapida</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <a href="#mod-4-1" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-amber-500/50 transition-colors block">
+                    <span class="text-amber-400 font-mono text-sm">4.1</span> &#x1F5A5;&#xFE0F; Ink Renderer
+                </a>
+                <a href="#mod-4-2" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-amber-500/50 transition-colors block">
+                    <span class="text-amber-400 font-mono text-sm">4.2</span> &#x2328;&#xFE0F; Commands System
+                </a>
+                <a href="#mod-4-3" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-amber-500/50 transition-colors block">
+                    <span class="text-amber-400 font-mono text-sm">4.3</span> &#x1F4AC; Dialog UI
+                </a>
+                <a href="#mod-4-4" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-amber-500/50 transition-colors block">
+                    <span class="text-amber-400 font-mono text-sm">4.4</span> &#x1F514; Notification System
+                </a>
+                <a href="#mod-4-5" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-amber-500/50 transition-colors block">
+                    <span class="text-amber-400 font-mono text-sm">4.5</span> &#x270F;&#xFE0F; Vim Mode
+                </a>
+                <a href="#mod-4-6" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-amber-500/50 transition-colors block">
+                    <span class="text-amber-400 font-mono text-sm">4.6</span> &#x2328;&#xFE0F; Keybindings
+                </a>
+                <a href="#mod-4-7" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-amber-500/50 transition-colors block">
+                    <span class="text-amber-400 font-mono text-sm">4.7</span> &#x1F4FA; Fullscreen Mode
+                </a>
+                <a href="#mod-4-8" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-amber-500/50 transition-colors block">
+                    <span class="text-amber-400 font-mono text-sm">4.8</span> &#x1F3A8; Theme & Styling
+                </a>
+            </div>
+        </section>
+
+        <!-- Module 4.1: Ink Renderer -->
+        <section id="mod-4-1" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-amber-400 font-mono text-sm font-bold">4.1</span>
+                        <span class="text-xs dark:text-gray-500">~50 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">Ink Renderer</h3>
+                    <p class="dark:text-gray-400 text-sm">O pipeline de rendering de 7 estagios que converte arvores de componentes React em output de terminal com performance de microsegundos.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F504; React Reconciler & Virtual DOM</div>
+                                <div class="text-xs dark:text-gray-500">Custom reconciler, ink-virtual-text, dirty flags</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> Um custom react-reconciler conecta ao proprio DOM do Ink. Nos ink-virtual-text nao tem backing Yoga. O dirty flag sinaliza se re-rendering e necessario, nos limpos sao copiados do frame anterior com O(changed cells).</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> Entender como React se conecta a uma saida de terminal e fundamental para compreender a arquitetura de UI do Claude Code.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> react-reconciler host, DOMElement tree, ink-virtual-text ghost nodes, dirty flag optimization, event handler isolation.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4D0; Yoga Layout Engine</div>
+                                <div class="text-xs dark:text-gray-500">WebAssembly Flexbox, index mismatch</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> Yoga e um motor Flexbox C++ compilado para WebAssembly. A interface LayoutNode desacopla o codigo dos bindings Yoga. DOM index != yoga index para nos virtuais, exigindo contagem manual de siblings.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> Yoga e o mesmo algoritmo de layout do React Native. Entender suas limitacoes no terminal e crucial para custom components.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> C++ to WASM compilation, LayoutNode interface, sibling counting for virtual nodes, ink-link/ink-progress without Yoga backing.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F3A8; renderNodeToOutput & Output Queue</div>
+                                <div class="text-xs dark:text-gray-500">Blit fast path, command buffer, two-pass replay</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> Tree walk recursivo convertendo nos em operacoes Output. Blit Fast Path copia nos limpos diretamente. O Output class e um command-buffer com operacoes write, blit, clear, clip/unclip. Replay em dois passes: expansao de damage box e execucao.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> O command buffer pattern e a chave para entender como o Ink atinge performance de microsegundos no terminal.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> Blit fast path, ScrollBox hardware scroll (DECSTBM + SU/SD), damage bounding box, two-pass replay design.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4BE; Packed Screen Buffer</div>
+                                <div class="text-xs dark:text-gray-500">Int32Array, StylePool, wide characters</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> Screen buffer com Int32Array: 2 words por celula (8 bytes). word0=charId, word1=styleId+hyperlinkId+width. Elimina alocacao de objeto por celula. StylePool faz intern, transition e cache de escape ANSI.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> Este design elimina 24,000 objetos por frame em um terminal 200x120, zerando a pressao no garbage collector.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> Packed Int32Array, zero GC pressure, StylePool transition() pre-computation, CellWidth enum (Narrow/Wide/SpacerTail/SpacerHead).</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F50D; Cell Diff & Terminal Output</div>
+                                <div class="text-xs dark:text-gray-500">Damage box diff, minimal ANSI sequences</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> O diff final caminha apenas pelo damage bounding box. Para cada celula alterada, emite sequencia ANSI minimal. Steady-state frames tocam apenas O(changed cells).</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> O diff granular e o que torna o rendering de terminal viavel em tempo real sem flickering.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> Damage bounding box walk, minimal ANSI emission, alt-screen height clamping, charCache hot path accelerator.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F48E; Key Design Patterns</div>
+                                <div class="text-xs dark:text-gray-500">7 takeaways do rendering pipeline</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> Dirty flag como otimizacao central, Yoga como engine Flexbox WASM, screen buffer como typed array (nao objetos), Output como command buffer, alt-screen com 3 invariantes interlocking.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> Esses patterns sao aplicaveis a qualquer rendering engine de alto desempenho, nao apenas terminais.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> 7-stage pipeline, zero GC architecture, command buffer pattern, O(changed cells) steady-state, reconciler event handler isolation.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-4-1')" class="px-4 py-2 bg-amber-500/20 text-amber-400 rounded-lg text-sm font-medium hover:bg-amber-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-4-1.html" class="px-4 py-2 text-amber-400 border border-amber-500/30 rounded-lg text-sm font-medium hover:bg-amber-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Module 4.2: Commands System -->
+        <section id="mod-4-2" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-amber-400 font-mono text-sm font-bold">4.2</span>
+                        <span class="text-xs dark:text-gray-500">~40 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">Commands System</h3>
+                    <p class="dark:text-gray-400 text-sm">Tres tipos de slash commands, pipeline de registro, processamento de input e integracao com o REPL.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4CB; Three Command Types</div>
+                                <div class="text-xs dark:text-gray-500">Local, Local JSX, Prompt commands</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> Local Commands sao TypeScript puro e sincronos (/clear, /compact). Local JSX Commands renderizam componentes React/Ink (/help, /model). Prompt Commands expandem para blocos de conteudo enviados ao modelo (/commit, /review).</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> Saber qual tipo usar define a arquitetura de qualquer extensao de comando.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> local (sync TypeScript), local-jsx (React/Ink), prompt (text expansion), lazy loading via load: () => import().</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4E6; Registration Pipeline</div>
+                                <div class="text-xs dark:text-gray-500">4 skill sources, 2 independent gates</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> Pipeline: Static COMMANDS() + Skills dirs + Plugins + Workflows -> loadAllCommands(cwd) -> filter(availability + isEnabled) -> getCommands(cwd). Quatro fontes de skills: skillDirCommands, pluginSkills, bundledSkills, builtinPluginSkills.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> O pipeline de registro explica como comandos sao descobertos, filtrados e disponibilizados ao usuario.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> Four skill sources, availability gate (static auth-provider), isEnabled gate (runtime feature-flag), neither is memoized.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F41A; Shell Command Substitution</div>
+                                <div class="text-xs dark:text-gray-500">Embedding de output em prompts</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> Prompts podem incluir shell substitution com backtick prefixado por !. Exemplo: git status e git diff HEAD sao executados e o resultado e injetado no prompt.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> Shell substitution permite criar prompts dinamicos que incluem contexto do ambiente atual.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> !backtick syntax, live output embedding, dynamic prompt construction.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F310; Bridge & Remote Mode</div>
+                                <div class="text-xs dark:text-gray-500">local-jsx blocked, BRIDGE_SAFE_COMMANDS</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> Em bridge/remote mode: local-jsx e sempre bloqueado (renderiza UI de terminal), prompt e sempre seguro (expande para texto), local deve estar explicitamente em BRIDGE_SAFE_COMMANDS.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> Entender restricoes de modo remoto e essencial para desenvolver comandos compativeis com todos os modos de execucao.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> Bridge safety classification, BRIDGE_SAFE_COMMANDS allowlist, remote mode constraints, dead-code elimination by Bun.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F511; Visibility Gates & Loading</div>
+                                <div class="text-xs dark:text-gray-500">Auth changes, lazy imports, internal commands</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> Dois gates independentes: availability (static auth-provider check) e isEnabled (runtime feature-flag check). Nenhum e memoizado, mudancas de auth tomam efeito imediatamente. Lazy loading via load: () => import().</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> O sistema de gates controla quais comandos cada tipo de usuario ve, sem necessidade de restart.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> availability gate (claude-ai/console), isEnabled() gate, no memoization, lazy import pattern, internal commands dead-code-eliminated.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F48E; Key Takeaways</div>
+                                <div class="text-xs dark:text-gray-500">Resumo do sistema de comandos</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> 3 tipos de execucao (local, local-jsx, prompt), lazy loading, dois gates independentes, shell substitution embeds live output, internal-only commands eliminados pelo Bun em builds.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> Este resumo consolida os conceitos e serve como referencia rapida para o design do sistema.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> Three execution types, lazy loading, two independent gates, shell substitution, dead-code elimination.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-4-2')" class="px-4 py-2 bg-amber-500/20 text-amber-400 rounded-lg text-sm font-medium hover:bg-amber-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-4-2.html" class="px-4 py-2 text-amber-400 border border-amber-500/30 rounded-lg text-sm font-medium hover:bg-amber-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Module 4.3: Dialog UI -->
+        <section id="mod-4-3" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-amber-400 font-mono text-sm font-bold">4.3</span>
+                        <span class="text-xs dark:text-gray-500">~45 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">Dialog UI</h3>
+                    <p class="dark:text-gray-400 text-sm">Arquitetura de 4 camadas para renderizacao de elementos interativos no terminal usando React e Ink.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F3D7;&#xFE0F; Four-Layer Architecture</div>
+                                <div class="text-xs dark:text-gray-500">Launchers, Helpers, Design System, Feature Components</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> Layer 1: Launchers (funcoes async retornando typed Promises). Layer 2: Helpers (showDialog/showSetupDialog wrappers). Layer 3: Design System (Dialog, Pane, PermissionDialog primitives). Layer 4: Feature Components (tool-specific permission requests).</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> A separacao em camadas permite reutilizar primitivas de UI em qualquer contexto do Claude Code.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> dialogLaunchers.tsx, interactiveHelpers.tsx, Dialog/Pane/PermissionDialog primitives, async-to-promise bridge.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F6E1;&#xFE0F; Permission Requests</div>
+                                <div class="text-xs dark:text-gray-500">BashPermissionRequest, classifier shimmer</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> BashPermissionRequest e o mais complexo: integracao com classifier, regras "allow prefix", warnings de comandos destrutivos e fallback de sandbox. ClassifierCheckingSubtitle foi extraido porque um clock de shimmer a 20fps re-renderizava a arvore inteira de 535 linhas.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> Permission requests sao o ponto critico de interacao entre seguranca e UX.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> BashPermissionRequest complexity, ClassifierCheckingSubtitle extraction, 20fps shimmer optimization, single switch routing.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F39B;&#xFE0F; CustomSelect Widget</div>
+                                <div class="text-xs dark:text-gray-500">TextOption, InputOption, selection list</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> Widget universal de input com duas variantes: TextOption (opcao labeled padrao) e InputOption (campo de texto live embarcado na lista de selecao).</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> CustomSelect e o building block reutilizado em quase toda interacao de selecao no Claude Code.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> Two variant types, embedded text field, isCancelActive text input conflict resolution.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F9D9; Wizard Pattern</div>
+                                <div class="text-xs dark:text-gray-500">WizardProvider, useWizard, auto-computed title</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> WizardProvider como state container, useWizard como hook de navegacao, WizardDialogLayout com titulo auto-computed por step, WizardNavigationFooter contextual. Wizards gerenciam seu proprio ciclo de vida de exit.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> O wizard pattern e o padrao para qualquer fluxo multi-step no Claude Code.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> WizardProvider state container, useWizard navigation hook, auto-computed titles, contextual footer, self-managed exit lifecycle.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F517; showSetupDialog Architecture</div>
+                                <div class="text-xs dark:text-gray-500">AppStateProvider, KeybindingSetup, sole location</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> showSetupDialog e o unico local onde AppStateProvider e KeybindingSetup sao adicionados. Dialogs tornam-se funcoes async retornando typed Promises.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> Centralizar o setup garante consistencia de contexto em todos os dialogs do sistema.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> Sole location for AppStateProvider/KeybindingSetup, async function pattern, typed Promise returns.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F48E; Key Takeaways</div>
+                                <div class="text-xs dark:text-gray-500">Patterns e decisoes de design</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> Dialogs como async functions, showSetupDialog como unico ponto de setup, isCancelActive para conflitos de input, permission requests via single switch, wizards com lifecycle proprio.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> Consolida os patterns de design que regem toda a UI interativa do Claude Code.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> Async dialog pattern, sole setup location, input conflict resolution, switch-based routing, self-managed wizards.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-4-3')" class="px-4 py-2 bg-amber-500/20 text-amber-400 rounded-lg text-sm font-medium hover:bg-amber-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-4-3.html" class="px-4 py-2 text-amber-400 border border-amber-500/30 rounded-lg text-sm font-medium hover:bg-amber-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Module 4.4: Notification System -->
+        <section id="mod-4-4" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-amber-400 font-mono text-sm font-bold">4.4</span>
+                        <span class="text-xs dark:text-gray-500">~45 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">Notification System</h3>
+                    <p class="dark:text-gray-400 text-sm">Dois pipelines completamente separados: Toast Queue no REPL e OS/Terminal Notifier com suporte a iTerm2, Kitty, Ghostty.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4E2; In-REPL Toast Queue</div>
+                                <div class="text-xs dark:text-gray-500">Priority-based dequeuing, fold merging</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> Fila com 4 niveis de prioridade (immediate/high/medium/low). Campo fold permite merge de notificacoes com mesma key. immediate preempta o display atual, devolvendo itens deslocados a fila.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> O sistema de prioridades garante que alertas criticos como rate limits nunca sejam perdidos em meio a notificacoes de baixa prioridade.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> 4-level priority (immediate/high/medium/low), fold field as Array.reduce(), synchronous cancellation via currentTimeoutId, preempt-and-queue pattern.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F3F7;&#xFE0F; 14 Specialized Hooks</div>
+                                <div class="text-xs dark:text-gray-500">Rate limits, model deprecation, MCP, IDE</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> 14 hooks especializados: rate-limit-warning (high), limit-reached (immediate), model-deprecation (high), lsp-error (medium), fast-mode (high), mcp-connectivity (medium), ide-status (medium), settings-error (high).</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> Cada hook tem key e prioridade cuidadosamente escolhidas para garantir comportamento correto no sistema de filas.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> Hook catalog, keyed notifications, priority assignment rationale, limit-reached as sole immediate priority.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4F1; OS/Terminal Notifier</div>
+                                <div class="text-xs dark:text-gray-500">iTerm2 OSC 9, Kitty OSC 99, Ghostty, BEL</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> 5 canais: iterm2 (OSC 9), kitty (OSC 99 em 3 passos), ghostty (OSC single), terminal_bell (BEL unwrapped para tmux), notifications_disabled (no-op). BEL permanece unwrapped para que bell-action do tmux funcione nativamente.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> Notificacoes nativas sao cruciais para sessoes em background e integracao com multiplexadores de terminal.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> OSC escape sequences per terminal, BEL unwrapped for tmux, progress reporting (ConEmu/Ghostty/iTerm2), channel routing.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4E6; Background Task Collapsing</div>
+                                <div class="text-xs dark:text-gray-500">Success collapsing, verbose bypass</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> Apenas completamentos bem-sucedidos colapsam. Tasks falhadas e mortas permanecem individuais. Modo verbose ignora o collapsing.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> O collapsing inteligente evita poluicao visual sem esconder informacoes de erro.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> Success-only collapsing, failed/killed remain individual, verbose mode bypass, message-list level.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F512; MCP Channel Notifications (Kairos)</div>
+                                <div class="text-xs dark:text-gray-500">6-layer security gate</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> Notificacoes MCP passam por 6 camadas de seguranca: Capability -> Runtime flag -> Auth -> Org policy -> Session opt-in -> Allowlist.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> MCP channel notifications demonstram o modelo de seguranca em profundidade aplicado a cada feature do Claude Code.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> 6-layer gate, capability check, runtime flag, auth verification, org policy, session opt-in, allowlist.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F48E; Key Takeaways</div>
+                                <div class="text-xs dark:text-gray-500">Dois pipelines, prioridade, tmux compatibility</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> Toast queue para status interativo, OS notifier para sessoes em background. Queue usa dequeuing baseado em prioridade, nao FIFO. BEL unwrapped para compatibilidade tmux.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> Resume os trade-offs de design entre os dois pipelines e suas respectivas garantias.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> Two pipelines, priority-based dequeuing, immediate preemption, BEL tmux compatibility, 6-layer MCP security.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-4-4')" class="px-4 py-2 bg-amber-500/20 text-amber-400 rounded-lg text-sm font-medium hover:bg-amber-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-4-4.html" class="px-4 py-2 text-amber-400 border border-amber-500/30 rounded-lg text-sm font-medium hover:bg-amber-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Module 4.5: Vim Mode -->
+        <section id="mod-4-5" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-amber-400 font-mono text-sm font-bold">4.5</span>
+                        <span class="text-xs dark:text-gray-500">~60 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">Vim Mode</h3>
+                    <p class="dark:text-gray-400 text-sm">Implementacao completa de um vim keybinding engine em TypeScript: state machines, funcoes puras, dot-repeat e text objects.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4DD; Type System as Specification</div>
+                                <div class="text-xs dark:text-gray-500">VimState, CommandState discriminated unions</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> VimState e uma discriminated union com INSERT (insertedText para dot-repeat) e NORMAL (CommandState). CommandState tem 11 variantes (idle, count, operator, operatorCount, find, etc.) que codificam exatamente o que o parser precisa lembrar.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> TypeScript's exhaustive switch-checking garante que adicionar um novo estado produz erro de compilacao ate que um handler seja adicionado.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> Discriminated unions, exhaustive switch, 11 CommandState variants, PersistentState (lastChange, lastFind, register).</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F504; Transition Table</div>
+                                <div class="text-xs dark:text-gray-500">State machine dispatch, handleNormalInput</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> transition() despacha por state.type para funcoes por estado. TransitionResult contem opcionalmente next state e execute callback. Callers chamam execute() e atualizam para next (ou resetam para idle). A logica nunca muta estado diretamente.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> A separacao entre transicao e efeito colateral torna o engine testavel e livre de dependencias de UI.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> Per-state dispatch functions, TransitionResult (next + execute), handleNormalInput shared helper, null = unrecognized input.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x27A1;&#xFE0F; Motions - Pure Cursor Math</div>
+                                <div class="text-xs dark:text-gray-500">resolveMotion, inclusive/linewise flags</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> Funcoes puras: resolveMotion aplica um step por vez com early break em boundary. isInclusiveMotion (e, E, $) e isLinewiseMotion (j, k, G) controlam o range de operadores. Suporte completo: character, line, word, WORD, positions, file.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> Motions puras sao o fundamento composicional sobre o qual operadores constroem ranges de bytes.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> Pure functions, per-step application with boundary break, inclusive vs exclusive, linewise vs charwise, 7 motion categories.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x2702;&#xFE0F; Operators & Text Objects</div>
+                                <div class="text-xs dark:text-gray-500">delete/change/yank, cw special case, bracket/quote</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> 4 entry points: executeOperatorMotion, executeOperatorFind, executeOperatorTextObj, executeLineOp. cw trata diferente de dw (ate end of word, nao start of next). Text objects: bracket pairs (depth-counting bidirectional) vs quote pairs (linear pairing).</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> O design de operators e text objects mostra como composition funciona em pratica: motions fornecem ranges, operators aplicam transformacoes.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> applyOperator (shared helper), cw special case, bracket depth-counting, quote linear pairing, Intl.Segmenter for unicode safety.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F504; Dot Repeat & Count Multiplication</div>
+                                <div class="text-xs dark:text-gray-500">RecordedChange, 2d3w = 6 words, MAX_VIM_COUNT</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> Dot-repeat funciona via RecordedChange (discriminated union capturando tudo para replay). Compound counts (2d3w) usam operatorCount state com multiplicacao de counts. MAX_VIM_COUNT = 10000 previne catastrophes de performance.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> Dot-repeat e o recurso mais poderoso do vim para produtividade. Entender o mecanismo de replay e essencial.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> RecordedChange union, operatorCount state for compound counts, count multiplication, MAX_VIM_COUNT safety limit.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F3AF; Context Interface - Dependency Inversion</div>
+                                <div class="text-xs dark:text-gray-500">OperatorContext, TransitionContext, zero UI imports</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> Nenhum arquivo vim importa React, Ink ou framework de UI. Todos os efeitos fluem por OperatorContext e TransitionContext. O engine e testavel contra qualquer objeto que satisfaca a interface.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> Dependency inversion textbook: o engine opera puramente via interfaces, permitindo unit testing sem terminal.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> OperatorContext (cursor, text, setText, setOffset, enterInsert, register), TransitionContext extends with onUndo/onDotRepeat, zero UI knowledge.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-4-5')" class="px-4 py-2 bg-amber-500/20 text-amber-400 rounded-lg text-sm font-medium hover:bg-amber-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-4-5.html" class="px-4 py-2 text-amber-400 border border-amber-500/30 rounded-lg text-sm font-medium hover:bg-amber-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Module 4.6: Keybindings -->
+        <section id="mod-4-6" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-amber-400 font-mono text-sm font-bold">4.6</span>
+                        <span class="text-xs dark:text-gray-500">~50 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">Keybindings</h3>
+                    <p class="dark:text-gray-400 text-sm">Pipeline de 5 estagios: terminal decode, binding config, key matching, chord resolution e React dispatch.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4DF; Terminal Byte Decode</div>
+                                <div class="text-xs dark:text-gray-500">VT sequences, CSI u (Kitty), modifyOtherKeys</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> parse-keypress.ts converte escape sequences em ParsedKey com nome, flags de modificadores e deteccao de paste. 3 protocolos: Legacy VT (arrow/function keys), CSI u/Kitty (Shift+Enter, Ctrl+Space), xterm modifyOtherKeys.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> Entender como bytes brutos do terminal se tornam eventos estruturados e o fundamento de toda a input layer.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> ParsedKey structure, XTerm modifier bitmask (1+shift+alt+ctrl+super), 3 keyboard protocols, ParsedMouse separate type.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x2699;&#xFE0F; Binding Config & Key Matching</div>
+                                <div class="text-xs dark:text-gray-500">18 contexts, platform-aware, alt/meta unification</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> DEFAULT_BINDINGS com 18 contextos UI. Keys dinamicas por plataforma (Windows: alt+v para image paste). Alt/meta unificacao porque legacy terminals nao distinguem. Escape special case: Ink interpreta como meta=true.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> O sistema de contextos e o mecanismo que permite keybindings diferentes em diferentes partes da UI.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> 18 UI contexts, platform-aware dynamic keys, feature-flag conditional bindings, alt/meta unification, escape stripping.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F3B9; Chord Resolution</div>
+                                <div class="text-xs dark:text-gray-500">5 outcomes, last-wins override, chord prefix</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> Resolver retorna 5 outcomes: match, none, unbound, chord_started, chord_cancelled. Last-wins override: user bindings sao appended apos defaults. Chord prefix detection prioriza sequencias longas sobre bindings simples.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> Chord resolution e o que permite shortcuts multi-key como ctrl+x ctrl+k sem conflitar com ctrl+x sozinho.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> 5 resolution outcomes, last-wins model, chordWinners map, null-unbinding, chord prefix detection priority.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x269B;&#xFE0F; React Hooks & User Config</div>
+                                <div class="text-xs dark:text-gray-500">useKeybinding, hot-reload, reserved shortcuts</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> useKeybinding/useKeybindings registram interesse. False return = propagate further. KeybindingContext com resolve(), setPendingChord(), getDisplayText(). Hot-reload via chokidar com 500ms write-stabilise delay.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> O sistema de hooks React e o que conecta keybindings a componentes de UI de forma reativa.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> false return convention, KeybindingContext shared bus, hot-reload pipeline, reserved shortcuts (ctrl+c/d/m), keybindings.json schema.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F6E1;&#xFE0F; Validation & Reserved Keys</div>
+                                <div class="text-xs dark:text-gray-500">5 warning types, non-rebindable, platform-specific</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> 5 tipos de warning: parse_error, duplicate, reserved, invalid_context, invalid_action. Non-rebindable: ctrl+c, ctrl+d, ctrl+m. Terminal reserved: ctrl+z, ctrl+\. macOS only: cmd+c/v/x/q/w/tab/space. ctrl+s NAO e reservado.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> Saber quais teclas sao reservadas e por que previne frustracao ao customizar keybindings.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> 5 warning types, non-rebindable keys (ctrl+c/d/m), ctrl+s intentionally not reserved, duplicate detection via regex pre-parse.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F48E; Full Pipeline Summary</div>
+                                <div class="text-xs dark:text-gray-500">Bytes to handler, 5-stage flow</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> Raw bytes -> parse-keypress.ts (escape sequence decode) -> match.ts (Ink flag normalize) -> resolver.ts (chord logic + context matching) -> React hooks (handler invocation) -> stopImmediatePropagation (event bubble stop).</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> O pipeline completo mostra como cada camada adiciona uma transformacao especifica ate chegar ao handler final.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> 5-stage pipeline, per-stage transformation, context-aware resolution, platform-specific display formatting.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-4-6')" class="px-4 py-2 bg-amber-500/20 text-amber-400 rounded-lg text-sm font-medium hover:bg-amber-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-4-6.html" class="px-4 py-2 text-amber-400 border border-amber-500/30 rounded-lg text-sm font-medium hover:bg-amber-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Module 4.7: Fullscreen Mode -->
+        <section id="mod-4-7" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-amber-400 font-mono text-sm font-bold">4.7</span>
+                        <span class="text-xs dark:text-gray-500">~45 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">Fullscreen Mode</h3>
+                    <p class="dark:text-gray-400 text-sm">Alternate screen buffer DEC 1049, deteccao de ambiente, AlternateScreen component e OffscreenFreeze optimization.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4DF; DEC Private Mode Sequences</div>
+                                <div class="text-xs dark:text-gray-500">Mode 1049, mouse tracking stack, reverse disable</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> DEC mode 1049 salva cursor, troca para alt screen e limpa. Mouse tracking empilha 4 modos (1000+1002+1003+1006). Desabilitacao em ordem reversa para teardown limpo. SGR (1006) desabilitado primeiro.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> Entender DEC modes e essencial para qualquer TUI que precise de fullscreen ou mouse tracking.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> DEC 1049 vs 47 (cursor save), mouse mode superset hierarchy, reverse-order disable, SGR format disable first.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F50E; Fullscreen Detection Logic</div>
+                                <div class="text-xs dark:text-gray-500">Env vars, tmux probe sync, caching trick</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> isFullscreenActive() verifica interatividade, env vars, tmux -CC mode via probe sincrono (5ms). O probe e sincrono por design: async perdeu a corrida com React render e causou mouse wheel morto em iTerm2 -CC.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> Um caso classico de tradeoff correctness/performance: 5ms de bloqueio previne bug irrecuperavel de UX.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> probeTmuxControlModeSync(), 5ms correctness tradeoff, pre-seeded cache, two orthogonal mouse kill-switches.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x269B;&#xFE0F; AlternateScreen React Component</div>
+                                <div class="text-xs dark:text-gray-500">useInsertionEffect, height constraint</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> useInsertionEffect (nao useLayoutEffect) garante que ENTER_ALT_SCREEN chega ao terminal antes do primeiro frame. Height fixado em size.rows porque alt screen nao tem scrollback. Signal-exit cleanup para saida limpa.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> A escolha de useInsertionEffect sobre useLayoutEffect e um detalhe sutil de timing do React que evita broken views.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> useInsertionEffect timing, mutation phase vs layout phase, height=size.rows constraint, signal-exit cleanup handler.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F3D7;&#xFE0F; FullscreenLayout Slots</div>
+                                <div class="text-xs dark:text-gray-500">5 named slots, modal sizing, new messages pill</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> 5 slots: scrollable (message list), bottom (prompt), overlay (permissions), bottomFloat (speech bubble), modal (slash-command). Modal deixa exatamente 2 rows de transcript visivel acima. "N new messages" pill via useSyncExternalStore.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> O sistema de slots e o padrao para composicao de layout em aplicacoes de terminal complexas.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> 5 slot composition, MODAL_TRANSCRIPT_PEEK=2, ModalContext for interior dimensions, useSyncExternalStore pill.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x26A1; OffscreenFreeze Optimization</div>
+                                <div class="text-xs dark:text-gray-500">React object-identity bail-out, 'use no memo'</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> Retorna cached ref enquanto offscreen, produzindo zero diff e zero terminal output. 'use no memo' opta-out do React Compiler que quebraria o mecanismo de freeze. Virtual list exemption para evitar conflito com ScrollBox.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> OffscreenFreeze demonstra como explorar o bail-out de identity do React para otimizar rendering de terminal.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> Object-identity bail-out, 'use no memo' React Compiler opt-out, InVirtualListContext exemption, zero diff output.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F48E; Lifecycle & Key Takeaways</div>
+                                <div class="text-xs dark:text-gray-500">Enter to exit, tmux mouse hint</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> Sequencia completa: check -> mount -> enter alt screen -> render frames -> unmount -> exit alt screen -> restore cursor. Fullscreen default on para ant, off para external. Dois kill-switches ortogonais.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> O lifecycle completo mostra como cada decisao de deteccao se conecta a ativacao e desativacao corretas.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> 10-step lifecycle, fullscreen on for ant/off for external, CLAUDE_CODE_DISABLE_MOUSE, CLAUDE_CODE_NO_FLICKER.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-4-7')" class="px-4 py-2 bg-amber-500/20 text-amber-400 rounded-lg text-sm font-medium hover:bg-amber-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-4-7.html" class="px-4 py-2 text-amber-400 border border-amber-500/30 rounded-lg text-sm font-medium hover:bg-amber-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Module 4.8: Theme & Styling -->
+        <section id="mod-4-8" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-amber-400 font-mono text-sm font-bold">4.8</span>
+                        <span class="text-xs dark:text-gray-500">~45 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">Theme & Styling</h3>
+                    <p class="dark:text-gray-400 text-sm">Do ThemeName string ao output colorido no terminal: 6 palettes, chalk level clamping, daltonized variants e o /color command.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F3A8; 4-Layer Color Architecture</div>
+                                <div class="text-xs dark:text-gray-500">theme.ts, colorize.ts, styles.ts, design-system/color.ts</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> Layer 1: Semantic Color Palette (6 temas, ~70 tokens). Layer 2: Chalk Normalization (detect/boost/clamp). Layer 3: Layout + Style Types (CSS-like para terminal). Layer 4: Theme-Aware Colorizer (curried helper, theme key resolution).</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> A separacao em camadas garante que cada nivel opera independentemente, sem ciclos de resolucao.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> 4 layers, ~70 semantic tokens, O(1) flat lookup, styles.ts unaware of themes, design-system/color.ts as sole bridge.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F308; Six Themes & Daltonized Variants</div>
+                                <div class="text-xs dark:text-gray-500">dark, light, daltonized, ANSI, auto resolution</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> 6 temas: dark, light, light-daltonized, dark-daltonized, light-ansi, dark-ansi. Daltonized substitui verde por azul sistematicamente (deuteranopia). ANSI themes usam apenas 16 cores padrao. auto resolvido em runtime.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> O design daltonized mostra como acessibilidade de cor e implementada de forma sistematica, nao ad-hoc.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> 6 concrete themes, ThemeSetting (auto) vs ThemeName (resolved), green->blue channel swap for deuteranopia, ANSI themes for custom palettes.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F527; colorize.ts - Terminal Environment Fixes</div>
+                                <div class="text-xs dark:text-gray-500">VS Code boost, tmux clamp, ordering matters</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> VS Code mente sobre suporte a cor (chalk level 2 -> orange vira salmon). tmux dropa truecolor backgrounds silenciosamente. Boost roda primeiro, clamp depois. VS Code dentro de tmux: clamp re-clamps para 2. Escape hatch: CLAUDE_CODE_TMUX_TRUECOLOR=1.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> Dois bug fixes de module-load-time que afetam toda a saida de cor subsequente do Claude Code.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> boostChalkLevelForXtermJs (level 2->3), clampChalkLevelForTmux (level 3->2), ordering: boost then clamp, string-prefix dispatch.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4DD; Styles Type System</div>
+                                <div class="text-xs dark:text-gray-500">TextStyles, Color union, noSelect property</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> Styles e o equivalente de CSS properties para terminal. TextStyles.color e sempre raw Color value, nunca theme key. Color e uma discriminated union (RGB/Hex/Ansi256/Ansi). noSelect controla exclusao de selecao de texto em fullscreen.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> A decisao de manter styles.ts completamente unaware de temas garante separacao de concerns limpa.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> Raw Color value (never theme key), template literal types for compile-time validation, noSelect from-left-edge variant, resolvedStyle for diff application.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F39B;&#xFE0F; /theme, /color & AgentColorManager</div>
+                                <div class="text-xs dark:text-gray-500">Live preview, swarm teammate guard, 8 agent colors</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> /theme com live preview via usePreviewTheme(). /color para sub-agent sessions (proibido para teammates). AgentColorManager mapeia agent types para 8 slots de cor com satisfies Record<> compile-time check.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> Os comandos de tema demonstram como customizacao de usuario se conecta ao sistema de paletas subjacente.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> ThemePicker live preview, /color teammate guard, "default" sentinel (not empty string), _FOR_SUBAGENTS_ONLY naming convention, satisfies constraint.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F48E; Key Takeaways</div>
+                                <div class="text-xs dark:text-gray-500">3 phases, naming conventions, shimmer pattern</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-amber-400">O que e:</strong> Tres fases: palette definition, environment normalization, rendering. VS Code boost e tmux clamp em module-load time. Theme resolution separada de color rendering. Shimmer pairs para animacoes de pulse.</div>
+                            <div><strong class="text-amber-400">Por que aprender:</strong> Consolida o fluxo completo de ThemeName -> raw color -> chalk output -> ANSI escape.</div>
+                            <div><strong class="text-amber-400">Conceitos-chave:</strong> 3 phases, boost-then-clamp ordering, _FOR_SUBAGENTS_ONLY guardrails, Shimmer suffix pairs, "default" sentinel for reset persistence.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-4-8')" class="px-4 py-2 bg-amber-500/20 text-amber-400 rounded-lg text-sm font-medium hover:bg-amber-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-4-8.html" class="px-4 py-2 text-amber-400 border border-amber-500/30 rounded-lg text-sm font-medium hover:bg-amber-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modals -->
+    <div id="modal-4-1" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-4-1')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-4-1')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-4-1.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+    <div id="modal-4-2" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-4-2')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-4-2')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-4-2.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+    <div id="modal-4-3" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-4-3')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-4-3')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-4-3.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+    <div id="modal-4-4" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-4-4')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-4-4')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-4-4.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+    <div id="modal-4-5" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-4-5')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-4-5')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-4-5.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+    <div id="modal-4-6" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-4-6')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-4-6')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-4-6.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+    <div id="modal-4-7" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-4-7')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-4-7')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-4-7.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+    <div id="modal-4-8" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-4-8')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-4-8')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-4-8.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+
+    <script>
+        function toggleTopic(el) {
+            const content = el.querySelector('.topic-content');
+            const section = el.closest('.divide-y');
+            if (!content) return;
+            const wasHidden = content.classList.contains('hidden');
+            section.querySelectorAll('.topic-content').forEach(c => c.classList.add('hidden'));
+            if (wasHidden) content.classList.remove('hidden');
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.classList.contains('dark');
+            html.classList.toggle('dark', !isDark);
+            html.classList.toggle('light', isDark);
+            localStorage.setItem('theme', isDark ? 'light' : 'dark');
+        }
+
+        (function() {
+            const saved = localStorage.getItem('theme');
+            if (saved === 'light') {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+            }
+        })();
+    </script>
+</body>
+</html>
