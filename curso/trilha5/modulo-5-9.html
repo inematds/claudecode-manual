@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modulo 5.9 Error Handling - Claude Code Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true, theme:'dark'});</script>
+    <script>tailwind.config={darkMode:'class',theme:{extend:{fontFamily:{sans:['Inter','sans-serif']},colors:{primary:{400:'#2dd4bf',500:'#14b8a6',600:'#0d9488',700:'#0f766e',800:'#115e59',900:'#134e4a'},dark:{800:'#1e293b',900:'#0f172a',950:'#020617'}}}}}</script>
+    <style>html.light{background:#f8fafc;color:#1e293b}html.light .dark\:bg-dark-950{background:#f8fafc!important}html.light .dark\:bg-dark-900{background:#fff!important}html.light .dark\:bg-dark-800{background:#f1f5f9!important}html.light .dark\:bg-dark-900\/50{background:rgba(255,255,255,.8)!important}html.light .dark\:bg-dark-800\/50{background:rgba(241,245,249,.8)!important}html.light .dark\:text-white{color:#1e293b!important}html.light .dark\:text-gray-300{color:#475569!important}html.light .dark\:text-gray-400{color:#64748b!important}html.light .dark\:border-gray-700{border-color:#e2e8f0!important}html.light .dark\:border-gray-800{border-color:#e2e8f0!important}html.light .dark\:border-gray-700\/50{border-color:rgba(226,232,240,.5)!important}html.light .text-teal-400{color:#0d9488!important}html.light .bg-teal-500\/10{background:rgba(13,148,136,.08)!important}html.light .bg-teal-500\/20{background:rgba(13,148,136,.12)!important}html.light .border-teal-500\/30{border-color:rgba(13,148,136,.2)!important}html.light .from-teal-900\/30{--tw-gradient-from:rgba(13,148,136,.08)!important}html.light nav{background:rgba(255,255,255,.85)!important;border-bottom:1px solid #e2e8f0!important}html.light .dark\:hover\:bg-dark-800:hover{background:#e2e8f0!important}</style>
+</head>
+<body class="dark:bg-dark-950 dark:text-white font-sans min-h-screen">
+    <nav class="sticky top-0 z-40 backdrop-blur-xl dark:bg-dark-900/50 border-b dark:border-gray-800"><div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap"><a href="../../index.html" class="text-yellow-400 font-bold text-lg whitespace-nowrap">&#x1F4BB; Claude Code Deep Dive</a><span class="dark:text-gray-600">|</span><a href="https://inema.club" target="_blank" class="text-sky-400 text-sm font-medium hover:underline">INEMA.CLUB</a><div class="flex items-center gap-1 ml-auto flex-wrap"><a href="../trilha1/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Core Architecture</span><span class="md:hidden">T1</span></a><a href="../trilha2/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Tool System</span><span class="md:hidden">T2</span></a><a href="../trilha3/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Agent Intelligence</span><span class="md:hidden">T3</span></a><a href="../trilha4/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Interface</span><span class="md:hidden">T4</span></a><a href="../trilha5/" class="px-2 py-1 text-xs font-bold rounded bg-teal-500/20 text-teal-400 border border-teal-500/30"><span class="hidden md:inline">Infrastructure</span><span class="md:hidden">T5</span></a><a href="../trilha6/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Security</span><span class="md:hidden">T6</span></a><a href="../trilha7/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Performance</span><span class="md:hidden">T7</span></a><a href="../trilha8/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Advanced</span><span class="md:hidden">T8</span></a><button onclick="toggleTheme()" class="ml-2 p-2 rounded-lg dark:hover:bg-dark-800 dark:text-gray-400" title="Alternar tema"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg></button></div></div></nav>
+
+    <div class="max-w-5xl mx-auto px-4 pt-6 pb-2"><nav class="flex items-center gap-2 text-sm dark:text-gray-400"><a href="../../index.html" class="hover:text-teal-400 transition-colors">Inicio</a><span>/</span><a href="./" class="hover:text-teal-400 transition-colors">Trilha 5</a><span>/</span><span class="text-teal-400 font-medium">Modulo 5.9</span></nav></div>
+
+    <header class="bg-gradient-to-b from-teal-900/30 to-transparent py-12 px-4"><div class="max-w-5xl mx-auto"><span class="inline-block px-3 py-1 text-xs font-bold uppercase tracking-wider text-teal-400 bg-teal-500/10 rounded-full border border-teal-500/30 mb-4">MODULO 5.9</span><h1 class="text-3xl md:text-4xl font-extrabold mb-3">&#x1F6A8; Error Handling</h1><p class="text-lg dark:text-gray-300 max-w-3xl mb-6">Arquitetura em camadas para classificacao de falhas, retry com backoff, overlay de erro no terminal e recuperacao de conversas interrompidas.</p><div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-xl"><div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50"><div class="text-2xl font-bold text-teal-400">7</div><div class="text-xs dark:text-gray-400">Topicos</div></div><div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50"><div class="text-2xl font-bold text-teal-400">~75</div><div class="text-xs dark:text-gray-400">Minutos</div></div><div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50"><div class="text-2xl font-bold text-teal-400">Deep</div><div class="text-xs dark:text-gray-400">Nivel</div></div><div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50"><div class="text-2xl font-bold text-teal-400">Source</div><div class="text-xs dark:text-gray-400">Tipo</div></div></div></div></header>
+
+    <main class="max-w-5xl mx-auto px-4 pb-20">
+
+        <section class="mb-16"><div class="flex items-center gap-4 mb-6"><div class="w-12 h-12 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-teal-500/30">1</div><h2 class="text-2xl font-bold dark:text-white">&#x1F3D7;&#xFE0F; Four Error Stack Layers</h2></div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <div class="space-y-3">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-teal-500"><strong class="text-teal-400">Layer 1: Typed Error Classes</strong><p class="text-sm dark:text-gray-300">Vocabulario de excecoes nomeadas por dominio de falha -- ClaudeError, AbortError, ShellError, ConfigParseError</p></div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-blue-500"><strong class="text-blue-400">Layer 2: API Retry Engine</strong><p class="text-sm dark:text-gray-300">Backoff exponencial, fallback 529, refresh auth, overflow de contexto</p></div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-purple-500"><strong class="text-purple-400">Layer 3: Terminal Error Overlay</strong><p class="text-sm dark:text-gray-300">Trecho de source inline com linha de crash destacada</p></div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-orange-500"><strong class="text-orange-400">Layer 4: Conversation Recovery</strong><p class="text-sm dark:text-gray-300">Resume de sessoes interrompidas/mid-turn</p></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-16"><div class="flex items-center gap-4 mb-6"><div class="w-12 h-12 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-teal-500/30">2</div><h2 class="text-2xl font-bold dark:text-white">&#x1F4DA; The Error Taxonomy</h2></div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm"><thead><tr class="border-b dark:border-gray-700"><th class="text-left py-2 px-3 text-teal-400">Classe</th><th class="text-left py-2 px-3 text-teal-400">Proposito</th><th class="text-left py-2 px-3 text-teal-400">Campos-chave</th></tr></thead>
+                    <tbody class="dark:text-gray-300">
+                        <tr class="border-b dark:border-gray-800"><td class="py-2 px-3 font-mono">AbortError</td><td class="py-2 px-3">Cancelamento por usuario (Esc/Ctrl-C)</td><td class="py-2 px-3 text-xs">name = 'AbortError'</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="py-2 px-3 font-mono">ShellError</td><td class="py-2 px-3">Comando shell exit nao-zero</td><td class="py-2 px-3 text-xs">stdout, stderr, code, interrupted</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="py-2 px-3 font-mono">ConfigParseError</td><td class="py-2 px-3">Arquivo config corrupto/ilegivel</td><td class="py-2 px-3 text-xs">filePath, defaultConfig</td></tr>
+                        <tr class="border-b dark:border-gray-800"><td class="py-2 px-3 font-mono text-xs">TelemetrySafeError_I_VERIFIED...</td><td class="py-2 px-3">Seguro para telemetria</td><td class="py-2 px-3 text-xs">telemetryMessage</td></tr>
+                    </tbody></table>
+                </div>
+                <div class="dark:bg-dark-900 rounded-xl border border-teal-500/30 p-4 mt-4 bg-gradient-to-r from-teal-500/5 to-transparent">
+                    <h4 class="font-bold text-teal-400 mb-2">isAbortError -- Three-Way Check</h4>
+                    <p class="dark:text-gray-300 text-sm">Checa <code>instanceof AbortError</code>, <code>instanceof APIUserAbortError</code> (SDK) e <code>e.name === 'AbortError'</code> (DOMException). Necessario porque minificacao mangle nomes de construtor.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-16"><div class="flex items-center gap-4 mb-6"><div class="w-12 h-12 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-teal-500/30">3</div><h2 class="text-2xl font-bold dark:text-white">&#x1F504; API Retry Engine</h2></div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4"><code class="text-teal-400">withRetry</code> e um async generator que encapsula cada chamada API Anthropic. Implementa retry sofisticado:</p>
+                <div class="dark:bg-dark-800 rounded-lg p-4 overflow-x-auto mb-4">
+<pre class="text-sm"><code class="dark:text-gray-300"><span class="text-gray-500">// Backoff exponencial com jitter +-25%</span>
+baseDelay = min(<span class="text-teal-400">500ms</span> * 2^(attempt-1), <span class="text-teal-400">32s</span>)
+jitter = random() * 0.25 * baseDelay
+delay = baseDelay + jitter</code></pre>
+                </div>
+                <div class="space-y-3">
+                    <div class="dark:bg-dark-800 rounded-lg p-3 border-l-4 border-red-500"><strong class="text-red-400">529 (Overloaded)</strong> <span class="text-sm dark:text-gray-300">-- Background queries bail imediatamente. Apos 3 consecutivos em Opus, fallback para modelo configurado.</span></div>
+                    <div class="dark:bg-dark-800 rounded-lg p-3 border-l-4 border-yellow-500"><strong class="text-yellow-400">Context Overflow</strong> <span class="text-sm dark:text-gray-300">-- Parseia contagem de tokens do erro 400 e ajusta maxTokens automaticamente. Floor de 3K tokens.</span></div>
+                    <div class="dark:bg-dark-800 rounded-lg p-3 border-l-4 border-blue-500"><strong class="text-blue-400">Unattended Mode</strong> <span class="text-sm dark:text-gray-300">-- <code>CLAUDE_CODE_UNATTENDED_RETRY=1</code> habilita retry indefinido em 429/529 com backoff max 5min e cap total de 6h.</span></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-16"><div class="flex items-center gap-4 mb-6"><div class="w-12 h-12 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-teal-500/30">4</div><h2 class="text-2xl font-bold dark:text-white">&#x1F6E0;&#xFE0F; Tool Error Formatting</h2></div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4">Falhas de tools requerem formatacao para dois consumidores: terminal (usuario) e modelo (em blocos <code>tool_result</code>).</p>
+                <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-teal-500 mb-4">
+                    <p class="dark:text-gray-300 text-sm"><strong class="text-teal-400">Cap de 10.000 caracteres</strong> com center-truncation: mantem 5K head + 5K tail. Protege budget de contexto de outputs grandes de compilador.</p>
+                </div>
+                <p class="dark:text-gray-300 text-sm"><strong>Zod errors -> LLM-friendly:</strong> Caminhos formatados como <code>todos[0].activeForm</code> e tipos expected/received especificados para habilitar auto-correcao do modelo.</p>
+            </div>
+        </section>
+
+        <section class="mb-16"><div class="flex items-center gap-4 mb-6"><div class="w-12 h-12 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-teal-500/30">5</div><h2 class="text-2xl font-bold dark:text-white">&#x1F4BB; Terminal Error Overlay</h2></div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4">Quando excecoes nao tratadas atingem o Ink render tree, <code class="text-teal-400">ErrorOverview</code> exibe overlay formatado com localizacao de crash e contexto de source inline:</p>
+                <ol class="dark:text-gray-300 space-y-1 text-sm list-decimal pl-6">
+                    <li>Parseia primeiro stack frame para file + line + column (StackUtils)</li>
+                    <li>Le source file sincronamente (readFileSync)</li>
+                    <li>Renderiza: linha de crash destacada em vermelho, linhas vizinhas dim</li>
+                </ol>
+                <p class="dark:text-gray-300 text-sm mt-4"><strong>readFileSync justificado:</strong> Componente renderiza sincronamente dentro do Ink reconciler. Como e o path de erro (processo ja quebrado), sync I/O e aceitavel.</p>
+            </div>
+        </section>
+
+        <section class="mb-16"><div class="flex items-center gap-4 mb-6"><div class="w-12 h-12 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-teal-500/30">6</div><h2 class="text-2xl font-bold dark:text-white">&#x1F527; Conversation Recovery Pipeline</h2></div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4">Pipeline de 4 estagios de deserializacao:</p>
+                <div class="space-y-2">
+                    <div class="dark:bg-dark-800 rounded-lg p-3"><strong class="text-teal-400">Stage 1:</strong> <span class="text-sm dark:text-gray-300">Legacy migration -- transforma tipos antigos de attachment</span></div>
+                    <div class="dark:bg-dark-800 rounded-lg p-3"><strong class="text-teal-400">Stage 2:</strong> <span class="text-sm dark:text-gray-300">Strip bad permission modes -- remove valores invalidos</span></div>
+                    <div class="dark:bg-dark-800 rounded-lg p-3"><strong class="text-teal-400">Stage 3:</strong> <span class="text-sm dark:text-gray-300">Filter invalid messages -- remove tool_use orfaos, thinking-only, whitespace-only</span></div>
+                    <div class="dark:bg-dark-800 rounded-lg p-3"><strong class="text-teal-400">Stage 4:</strong> <span class="text-sm dark:text-gray-300">Interrupt detection -- classifica como none / interrupted_prompt / interrupted_turn</span></div>
+                </div>
+                <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-yellow-500 mt-4">
+                    <p class="dark:text-gray-300 text-sm"><strong class="text-yellow-400">interrupted_turn</strong> converte para <code>interrupted_prompt</code> injetando mensagem sintetica <code>"Continue from where you left off."</code> com <code>isMeta: true</code>, unificando ambos os tipos de interrupcao.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-16"><div class="flex items-center gap-4 mb-6"><div class="w-12 h-12 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-teal-500/30">7</div><h2 class="text-2xl font-bold dark:text-white">&#x1F5FA;&#xFE0F; End-to-End Error Flows</h2></div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <div class="space-y-4">
+                    <div class="dark:bg-dark-800 rounded-lg p-4">
+                        <h4 class="font-bold text-teal-400 mb-2">Runtime Errors</h4>
+                        <p class="text-sm dark:text-gray-300">Tool falha -> <code>formatError()</code> -> tool_result block ao modelo + display no terminal</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4">
+                        <h4 class="font-bold text-blue-400 mb-2">API Errors</h4>
+                        <p class="text-sm dark:text-gray-300">API retorna erro -> <code>withRetry()</code> -> backoff + SystemAPIErrorMessage -> (exauriu) CannotRetryError -> logError() + ErrorOverview</p>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4">
+                        <h4 class="font-bold text-orange-400 mb-2">Session Recovery</h4>
+                        <p class="text-sm dark:text-gray-300">Processo morto mid-turn -> --continue/--resume -> pipeline 4-stage -> detectTurnInterruption() -> auto-resume</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-16">
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6">
+                <h3 class="text-xl font-bold text-teal-400 mb-4">&#x1F4CB; Resumo do Modulo</h3>
+                <div class="space-y-3">
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm"><span class="text-teal-400 mt-0.5">&#x2705;</span><span>Cada dominio de falha tem classe de erro typed dedicada, habilitando instanceof checks que sobrevivem minificacao</span></div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm"><span class="text-teal-400 mt-0.5">&#x2705;</span><span>withRetry lida com 10+ modos de falha: 529 model fallback, context overflow auto-adjust, OAuth refresh, backoff exponencial com jitter</span></div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm"><span class="text-teal-400 mt-0.5">&#x2705;</span><span>Background queries bail imediatamente em 529 -- retry amplificaria cascata de capacidade</span></div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm"><span class="text-teal-400 mt-0.5">&#x2705;</span><span>Tool errors truncam a 10K chars (5K head + 5K tail) antes de enviar ao modelo</span></div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm"><span class="text-teal-400 mt-0.5">&#x2705;</span><span>Recovery roda pipeline de 4 stages limpando transcripts quebrados e injetando mensagens sinteticas para auto-resume</span></div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm"><span class="text-teal-400 mt-0.5">&#x2705;</span><span>TelemetrySafeError usa verbosidade deliberada como funcao de revisao de codigo -- devs devem confirmar que dados senssiveis nao estao na mensagem</span></div>
+                </div>
+            </div>
+        </section>
+
+        <div class="flex items-center justify-between">
+            <a href="modulo-5-8.html" class="flex items-center gap-2 dark:text-gray-400 hover:text-teal-400 transition-colors"><span>&#x2190;</span> Modulo Anterior</a>
+            <a href="./" class="flex items-center gap-2 text-teal-400 hover:text-teal-300 transition-colors font-medium">Voltar para Trilha <span>&#x2192;</span></a>
+        </div>
+    </main>
+    <script>function toggleTheme(){const h=document.documentElement;const d=h.classList.contains('dark');h.classList.toggle('dark',!d);h.classList.toggle('light',d);localStorage.setItem('theme',d?'light':'dark')}(function(){const s=localStorage.getItem('theme');if(s==='light'){document.documentElement.classList.remove('dark');document.documentElement.classList.add('light')}})();</script>
+</body>
+</html>

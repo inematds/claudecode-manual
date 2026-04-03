@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modulo 5.6 Migrations - Claude Code Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true, theme:'dark'});</script>
+    <script>tailwind.config={darkMode:'class',theme:{extend:{fontFamily:{sans:['Inter','sans-serif']},colors:{primary:{400:'#2dd4bf',500:'#14b8a6',600:'#0d9488',700:'#0f766e',800:'#115e59',900:'#134e4a'},dark:{800:'#1e293b',900:'#0f172a',950:'#020617'}}}}}</script>
+    <style>html.light{background:#f8fafc;color:#1e293b}html.light .dark\:bg-dark-950{background:#f8fafc!important}html.light .dark\:bg-dark-900{background:#fff!important}html.light .dark\:bg-dark-800{background:#f1f5f9!important}html.light .dark\:bg-dark-900\/50{background:rgba(255,255,255,.8)!important}html.light .dark\:bg-dark-800\/50{background:rgba(241,245,249,.8)!important}html.light .dark\:text-white{color:#1e293b!important}html.light .dark\:text-gray-300{color:#475569!important}html.light .dark\:text-gray-400{color:#64748b!important}html.light .dark\:border-gray-700{border-color:#e2e8f0!important}html.light .dark\:border-gray-800{border-color:#e2e8f0!important}html.light .dark\:border-gray-700\/50{border-color:rgba(226,232,240,.5)!important}html.light .text-teal-400{color:#0d9488!important}html.light .bg-teal-500\/10{background:rgba(13,148,136,.08)!important}html.light .bg-teal-500\/20{background:rgba(13,148,136,.12)!important}html.light .border-teal-500\/30{border-color:rgba(13,148,136,.2)!important}html.light .from-teal-900\/30{--tw-gradient-from:rgba(13,148,136,.08)!important}html.light nav{background:rgba(255,255,255,.85)!important;border-bottom:1px solid #e2e8f0!important}html.light .dark\:hover\:bg-dark-800:hover{background:#e2e8f0!important}</style>
+</head>
+<body class="dark:bg-dark-950 dark:text-white font-sans min-h-screen">
+    <nav class="sticky top-0 z-40 backdrop-blur-xl dark:bg-dark-900/50 border-b dark:border-gray-800"><div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap"><a href="../../index.html" class="text-yellow-400 font-bold text-lg whitespace-nowrap">&#x1F4BB; Claude Code Deep Dive</a><span class="dark:text-gray-600">|</span><a href="https://inema.club" target="_blank" class="text-sky-400 text-sm font-medium hover:underline">INEMA.CLUB</a><div class="flex items-center gap-1 ml-auto flex-wrap"><a href="../trilha1/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Core Architecture</span><span class="md:hidden">T1</span></a><a href="../trilha2/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Tool System</span><span class="md:hidden">T2</span></a><a href="../trilha3/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Agent Intelligence</span><span class="md:hidden">T3</span></a><a href="../trilha4/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Interface</span><span class="md:hidden">T4</span></a><a href="../trilha5/" class="px-2 py-1 text-xs font-bold rounded bg-teal-500/20 text-teal-400 border border-teal-500/30"><span class="hidden md:inline">Infrastructure</span><span class="md:hidden">T5</span></a><a href="../trilha6/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Security</span><span class="md:hidden">T6</span></a><a href="../trilha7/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Performance</span><span class="md:hidden">T7</span></a><a href="../trilha8/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Advanced</span><span class="md:hidden">T8</span></a><button onclick="toggleTheme()" class="ml-2 p-2 rounded-lg dark:hover:bg-dark-800 dark:text-gray-400" title="Alternar tema"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg></button></div></div></nav>
+
+    <div class="max-w-5xl mx-auto px-4 pt-6 pb-2"><nav class="flex items-center gap-2 text-sm dark:text-gray-400"><a href="../../index.html" class="hover:text-teal-400 transition-colors">Inicio</a><span>/</span><a href="./" class="hover:text-teal-400 transition-colors">Trilha 5</a><span>/</span><span class="text-teal-400 font-medium">Modulo 5.6</span></nav></div>
+
+    <header class="bg-gradient-to-b from-teal-900/30 to-transparent py-12 px-4"><div class="max-w-5xl mx-auto"><span class="inline-block px-3 py-1 text-xs font-bold uppercase tracking-wider text-teal-400 bg-teal-500/10 rounded-full border border-teal-500/30 mb-4">MODULO 5.6</span><h1 class="text-3xl md:text-4xl font-extrabold mb-3">&#x1F504; Migrations</h1><p class="text-lg dark:text-gray-300 max-w-3xl mb-6">Como Claude Code atualiza config de usuario e settings de modelo entre versoes -- sem quebrar nada ou surpreender usuarios.</p><div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-xl"><div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50"><div class="text-2xl font-bold text-teal-400">6</div><div class="text-xs dark:text-gray-400">Topicos</div></div><div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50"><div class="text-2xl font-bold text-teal-400">~60</div><div class="text-xs dark:text-gray-400">Minutos</div></div><div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50"><div class="text-2xl font-bold text-teal-400">Deep</div><div class="text-xs dark:text-gray-400">Nivel</div></div><div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50"><div class="text-2xl font-bold text-teal-400">Source</div><div class="text-xs dark:text-gray-400">Tipo</div></div></div></div></header>
+
+    <main class="max-w-5xl mx-auto px-4 pb-20">
+
+        <section class="mb-16"><div class="flex items-center gap-4 mb-6"><div class="w-12 h-12 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-teal-500/30">1</div><h2 class="text-2xl font-bold dark:text-white">&#x1F680; Overview &amp; 5 Migration Types</h2></div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4">Cada vez que Claude Code inicia, pode silenciosamente corrigir settings stale, remapear aliases de modelo, mover campos entre arquivos ou re-surfacear dialogos UI. Migracoes sao funcoes idempotentes one-shot dentro de <code class="text-teal-400">runMigrations()</code> em <code>main.tsx</code>.</p>
+                <div class="space-y-3">
+                    <div class="dark:bg-dark-800 rounded-lg p-3"><strong class="text-teal-400">Type 1: Settings Promotions</strong> -- Move campos de <code>~/.claude.json</code> para <code>settings.json</code></div>
+                    <div class="dark:bg-dark-800 rounded-lg p-3"><strong class="text-teal-400">Type 2: Model Alias Upgrades</strong> -- Remapeia strings de modelo stale/removidas em userSettings</div>
+                    <div class="dark:bg-dark-800 rounded-lg p-3"><strong class="text-teal-400">Type 3: Config Key Renames</strong> -- Renomeia chaves de implementacao que vazaram para config publico</div>
+                    <div class="dark:bg-dark-800 rounded-lg p-3"><strong class="text-teal-400">Type 4: One-Shot Resets</strong> -- Limpa flags para re-surfacear dialogos quando UX muda</div>
+                    <div class="dark:bg-dark-800 rounded-lg p-3"><strong class="text-teal-400">Type 5: Async File Migrations</strong> -- Move dados de config para arquivos separados sem bloquear UI</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-16"><div class="flex items-center gap-4 mb-6"><div class="w-12 h-12 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-teal-500/30">2</div><h2 class="text-2xl font-bold dark:text-white">&#x2699;&#xFE0F; The Runner: runMigrations()</h2></div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4">Todas as migracoes sincronas sao encapsuladas em uma unica funcao. Chamada durante o hook <code class="text-teal-400">preAction</code> do Commander, apos config carregado e antes do REPL iniciar.</p>
+                <div class="dark:bg-dark-800 rounded-lg p-4 overflow-x-auto mb-4">
+<pre class="text-sm"><code class="dark:text-gray-300"><span class="text-teal-400">const</span> CURRENT_MIGRATION_VERSION = <span class="text-yellow-400">11</span>;
+
+<span class="text-teal-400">function</span> runMigrations(): void {
+  <span class="text-teal-400">if</span> (getGlobalConfig().migrationVersion !== CURRENT_MIGRATION_VERSION) {
+    migrateAutoUpdatesToSettings();
+    migrateBypassPermissionsAcceptedToSettings();
+    <span class="text-gray-500">// ... 9 more sync migrations ...</span>
+    saveGlobalConfig(prev => ({...prev, migrationVersion: CURRENT_MIGRATION_VERSION}));
+  }
+  <span class="text-gray-500">// Async migration -- fire-and-forget</span>
+  migrateChangelogFromConfig().catch(() => {});
+}</code></pre>
+                </div>
+                <div class="dark:bg-dark-900 rounded-xl border border-teal-500/30 p-4 bg-gradient-to-r from-teal-500/5 to-transparent">
+                    <p class="dark:text-gray-300 text-sm"><strong class="text-teal-400">Version gate:</strong> <code>migrationVersion</code> em <code>~/.claude.json</code>. Uma vez igual a CURRENT_MIGRATION_VERSION, o bloco inteiro e pulado, evitando 11 ciclos redundantes de config save.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-16"><div class="flex items-center gap-4 mb-6"><div class="w-12 h-12 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-teal-500/30">3</div><h2 class="text-2xl font-bold dark:text-white">&#x1F50F; Two Idempotency Patterns</h2></div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border border-teal-500/30">
+                        <h4 class="font-bold text-teal-400 mb-2">Pattern A: Completion Flag</h4>
+                        <p class="dark:text-gray-300 text-sm mb-2">Usado quando "ja feito" nao e auto-evidente. Boolean/timestamp em <code>~/.claude.json</code>.</p>
+                        <div class="bg-dark-900/50 rounded p-2 text-xs overflow-x-auto">
+<pre><code>if (config.sonnet1m45MigrationComplete) return;
+// ... do migration ...
+saveGlobalConfig({...c, sonnet1m45MigrationComplete: true})</code></pre>
+                        </div>
+                    </div>
+                    <div class="dark:bg-dark-800 rounded-lg p-4 border border-teal-500/30">
+                        <h4 class="font-bold text-teal-400 mb-2">Pattern B: Self-Idempotent</h4>
+                        <p class="dark:text-gray-300 text-sm mb-2">Usado quando o dado fala por si. Se ja migrado, a checagem retorna false.</p>
+                        <div class="bg-dark-900/50 rounded p-2 text-xs overflow-x-auto">
+<pre><code>const model = getSettingsForSource('userSettings')?.model;
+if (model !== 'claude-opus-4-20250514') return;
+updateSettingsForSource('userSettings', { model: 'opus' })</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-16"><div class="flex items-center gap-4 mb-6"><div class="w-12 h-12 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-teal-500/30">4</div><h2 class="text-2xl font-bold dark:text-white">&#x1F512; Settings Layer Discipline</h2></div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4">Migracoes so tocam <code class="text-teal-400">userSettings</code> (e ocasionalmente <code>localSettings</code>). Nunca leem de merged settings.</p>
+                <div class="dark:bg-dark-800 rounded-lg p-4 border-l-4 border-red-500">
+                    <p class="dark:text-gray-300 text-sm"><strong class="text-red-400">Por que?</strong> Se uma migracao lesse de settings merged, poderia ver um setting project-scoped e "ajudadamente" escrever esse valor no global userSettings, subitamente tornando uma preferencia por-projeto o novo default em todos os projetos.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-16"><div class="flex items-center gap-4 mb-6"><div class="w-12 h-12 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-teal-500/30">5</div><h2 class="text-2xl font-bold dark:text-white">&#x1F4CA; Analytics Instrumentation</h2></div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <p class="dark:text-gray-300 mb-4">A maioria das migracoes chama <code class="text-teal-400">logEvent()</code> para registrar o que aconteceu. Isso permite ao time saber quando uma migracao ainda esta sendo aplicada ou quando e seguro remover o codigo.</p>
+                <p class="dark:text-gray-300 text-sm"><strong>Regra critica:</strong> Migracoes NUNCA devem fazer throw. Erros sao capturados, logados e silenciosamente engolidos para nao quebrar startup.</p>
+            </div>
+        </section>
+
+        <section class="mb-16"><div class="flex items-center gap-4 mb-6"><div class="w-12 h-12 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center text-xl font-bold flex-shrink-0 border border-teal-500/30">6</div><h2 class="text-2xl font-bold dark:text-white">&#x1F4DD; Adding a New Migration</h2></div>
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6 mb-6">
+                <ol class="dark:text-gray-300 space-y-2 text-sm list-decimal pl-6">
+                    <li>Crie <code>src/migrations/myNewMigration.ts</code> com funcao exportada unica</li>
+                    <li>Escolha estrategia de idempotencia: completion flag ou self-idempotent</li>
+                    <li>So leia/escreva em <code>userSettings</code> (ou <code>localSettings</code> para dados project-scoped)</li>
+                    <li>Chame <code>logEvent('tengu_my_migration_name', {...})</code></li>
+                    <li>Encapsule o body em try/catch -- migracoes nunca devem fazer throw</li>
+                    <li>Importe em <code>main.tsx</code> dentro do bloco <code>if (migrationVersion !== CURRENT_MIGRATION_VERSION)</code></li>
+                    <li><strong class="text-teal-400">Incremente CURRENT_MIGRATION_VERSION</strong> para que usuarios existentes re-executem o set</li>
+                </ol>
+            </div>
+        </section>
+
+        <section class="mb-16">
+            <div class="dark:bg-dark-900 rounded-xl border dark:border-gray-700/50 p-6">
+                <h3 class="text-xl font-bold text-teal-400 mb-4">&#x1F4CB; Resumo do Modulo</h3>
+                <div class="space-y-3">
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm"><span class="text-teal-400 mt-0.5">&#x2705;</span><span>runMigrations() e o ponto de entrada unico -- lista flat de chamadas guardada por CURRENT_MIGRATION_VERSION = 11</span></div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm"><span class="text-teal-400 mt-0.5">&#x2705;</span><span>Dois padroes de idempotencia: completion flag em GlobalConfig e self-idempotent data checks</span></div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm"><span class="text-teal-400 mt-0.5">&#x2705;</span><span>Todas as migracoes de modelo so tocam userSettings para evitar globalizar preferencia project-scoped</span></div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm"><span class="text-teal-400 mt-0.5">&#x2705;</span><span>Migracoes nunca fazem throw -- erros sao capturados e logados silenciosamente</span></div>
+                    <div class="flex items-start gap-3 dark:text-gray-300 text-sm"><span class="text-teal-400 mt-0.5">&#x2705;</span><span>Adicionar migracao requer incrementar CURRENT_MIGRATION_VERSION para re-trigger nos usuarios existentes</span></div>
+                </div>
+            </div>
+        </section>
+
+        <div class="flex items-center justify-between">
+            <a href="modulo-5-5.html" class="flex items-center gap-2 dark:text-gray-400 hover:text-teal-400 transition-colors"><span>&#x2190;</span> Modulo Anterior</a>
+            <a href="modulo-5-7.html" class="flex items-center gap-2 text-teal-400 hover:text-teal-300 transition-colors font-medium">Proximo Modulo <span>&#x2192;</span></a>
+        </div>
+    </main>
+    <script>function toggleTheme(){const h=document.documentElement;const d=h.classList.contains('dark');h.classList.toggle('dark',!d);h.classList.toggle('light',d);localStorage.setItem('theme',d?'light':'dark')}(function(){const s=localStorage.getItem('theme');if(s==='light'){document.documentElement.classList.remove('dark');document.documentElement.classList.add('light')}})();</script>
+</body>
+</html>
