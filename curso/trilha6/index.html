@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T6 Connectivity - Claude Code Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: { 400: '#fb7185', 500: '#f43f5e', 600: '#e11d48', 700: '#be123c', 800: '#9f1239', 900: '#881337' },
+                        dark: { 800: '#1e293b', 900: '#0f172a', 950: '#020617' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html.light { background: #f8fafc; color: #1e293b; }
+        html.light .dark\:bg-dark-950 { background: #f8fafc !important; }
+        html.light .dark\:bg-dark-900 { background: #ffffff !important; }
+        html.light .dark\:bg-dark-800 { background: #f1f5f9 !important; }
+        html.light .dark\:bg-dark-900\/50 { background: rgba(255,255,255,0.8) !important; }
+        html.light .dark\:bg-dark-800\/50 { background: rgba(241,245,249,0.8) !important; }
+        html.light .dark\:text-white { color: #1e293b !important; }
+        html.light .dark\:text-gray-100 { color: #334155 !important; }
+        html.light .dark\:text-gray-300 { color: #475569 !important; }
+        html.light .dark\:text-gray-400 { color: #64748b !important; }
+        html.light .dark\:text-gray-500 { color: #94a3b8 !important; }
+        html.light .dark\:border-gray-700 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-800 { border-color: #e2e8f0 !important; }
+        html.light .dark\:border-gray-700\/50 { border-color: rgba(226,232,240,0.5) !important; }
+        html.light .text-rose-400 { color: #9f1239 !important; }
+        html.light .text-rose-500 { color: #be123c !important; }
+        html.light .bg-rose-500\/10 { background: rgba(159,18,57,0.08) !important; }
+        html.light .bg-rose-500\/20 { background: rgba(159,18,57,0.12) !important; }
+        html.light .border-rose-500\/30 { border-color: rgba(159,18,57,0.2) !important; }
+        html.light .from-rose-900\/30 { --tw-gradient-from: rgba(159,18,57,0.08) !important; }
+        html.light .dark\:bg-gradient-to-b { background: #f8fafc !important; }
+        html.light nav { background: rgba(255,255,255,0.85) !important; border-bottom: 1px solid #e2e8f0 !important; }
+        html.light .dark\:hover\:bg-dark-800:hover { background: #e2e8f0 !important; }
+    </style>
+</head>
+<body class="dark:bg-dark-950 dark:text-white font-sans min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-40 backdrop-blur-xl dark:bg-dark-900/50 border-b dark:border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
+            <a href="../../index.html" class="text-yellow-400 font-bold text-lg whitespace-nowrap">&#x1F4BB; Claude Code Deep Dive</a>
+            <span class="dark:text-gray-600">|</span>
+            <a href="https://inema.club" target="_blank" class="text-sky-400 text-sm font-medium hover:underline">INEMA.CLUB</a>
+            <div class="flex items-center gap-1 ml-auto flex-wrap">
+                <a href="../trilha1/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Core Architecture</span><span class="md:hidden">T1</span></a>
+                <a href="../trilha2/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Tool System</span><span class="md:hidden">T2</span></a>
+                <a href="../trilha3/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Agent Intelligence</span><span class="md:hidden">T3</span></a>
+                <a href="../trilha4/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Interface</span><span class="md:hidden">T4</span></a>
+                <a href="../trilha5/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Configuration</span><span class="md:hidden">T5</span></a>
+                <a href="../trilha6/" class="px-2 py-1 text-xs font-bold rounded bg-rose-500/20 text-rose-400 border border-rose-500/30"><span class="hidden md:inline">Connectivity</span><span class="md:hidden">T6</span></a>
+                <a href="../trilha7/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">Unreleased Features</span><span class="md:hidden">T7</span></a>
+                <a href="../trilha8/" class="px-2 py-1 text-xs font-medium rounded dark:text-gray-400 dark:hover:bg-dark-800"><span class="hidden md:inline">The Big Picture</span><span class="md:hidden">T8</span></a>
+                <button onclick="toggleTheme()" class="ml-2 p-2 rounded-lg dark:hover:bg-dark-800 dark:text-gray-400" title="Alternar tema">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Header -->
+    <header class="bg-gradient-to-b from-rose-900/30 to-transparent py-16 px-4">
+        <div class="max-w-5xl mx-auto text-center">
+            <span class="inline-block px-3 py-1 text-xs font-bold uppercase tracking-wider text-rose-400 bg-rose-500/10 rounded-full border border-rose-500/30 mb-4">TRILHA 6</span>
+            <h1 class="text-4xl md:text-5xl font-extrabold mb-4">&#x1F310; Connectivity</h1>
+            <p class="text-lg dark:text-gray-300 max-w-2xl mx-auto mb-8">Domine o bridge remoto, autenticacao OAuth, integracao Git, upstream proxy, cron scheduling e o sistema de voz do Claude Code.</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-xl mx-auto">
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-rose-400">6</div>
+                    <div class="text-xs dark:text-gray-400">Modulos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-rose-400">~36</div>
+                    <div class="text-xs dark:text-gray-400">Topicos</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-rose-400">~5h</div>
+                    <div class="text-xs dark:text-gray-400">Duracao</div>
+                </div>
+                <div class="dark:bg-dark-800/50 rounded-lg p-3 border dark:border-gray-700/50">
+                    <div class="text-2xl font-bold text-rose-400">Avancado</div>
+                    <div class="text-xs dark:text-gray-400">Nivel</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 pb-20">
+
+        <!-- Quick Nav -->
+        <section class="mb-16">
+            <h2 class="text-xl font-bold mb-6 dark:text-gray-100">Navegacao Rapida</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <a href="#mod-6-1" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-rose-500/50 transition-colors block">
+                    <span class="text-rose-400 font-mono text-sm">6.1</span> &#x1F309; Bridge &amp; Remote
+                </a>
+                <a href="#mod-6-2" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-rose-500/50 transition-colors block">
+                    <span class="text-rose-400 font-mono text-sm">6.2</span> &#x1F511; OAuth Authentication
+                </a>
+                <a href="#mod-6-3" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-rose-500/50 transition-colors block">
+                    <span class="text-rose-400 font-mono text-sm">6.3</span> &#x1F4C2; Git Integration
+                </a>
+                <a href="#mod-6-4" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-rose-500/50 transition-colors block">
+                    <span class="text-rose-400 font-mono text-sm">6.4</span> &#x1F500; Upstream Proxy
+                </a>
+                <a href="#mod-6-5" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-rose-500/50 transition-colors block">
+                    <span class="text-rose-400 font-mono text-sm">6.5</span> &#x23F0; Cron &amp; Scheduling
+                </a>
+                <a href="#mod-6-6" class="dark:bg-dark-800 rounded-lg p-4 border dark:border-gray-700/50 hover:border-rose-500/50 transition-colors block">
+                    <span class="text-rose-400 font-mono text-sm">6.6</span> &#x1F399;&#xFE0F; Voice System
+                </a>
+            </div>
+        </section>
+
+        <!-- Module 6.1 -->
+        <section id="mod-6-1" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-rose-400 font-mono text-sm font-bold">6.1</span>
+                        <span class="text-xs dark:text-gray-500">~60 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">Bridge &amp; Remote</h3>
+                    <p class="dark:text-gray-400 text-sm">Como o Claude Code conecta o REPL local ao claude.ai via bridge bidirecional, com duas arquiteturas (v1 env-based e v2 env-less) e transport layer assimetrico.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F309; Bridge v1 vs v2 Architecture</div>
+                                <div class="text-xs dark:text-gray-500">Env-based polling vs env-less direct OAuth</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> Duas arquiteturas de bridge coexistem: v1 (register/poll/ack/heartbeat via Environments API) e v2 (POST /bridge direto, sem Environment). O GrowthBook flag tengu_bridge_repl_v2 controla qual caminho o REPL segue.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> Entender as duas versoes e essencial para diagnosticar problemas de conectividade e entender a evolucao da arquitetura.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> WorkSecret decode, initBridgeCore vs initEnvLessBridgeCore, session ID compatibility (cse_ vs session_), gate logic.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4E1; Transport Layer: WebSocket, SSE &amp; Hybrid</div>
+                                <div class="text-xs dark:text-gray-500">ReplBridgeTransport interface e backpressure</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> v1 usa HybridTransport (WebSocket reads + HTTP POSTs). v2 e assimetrico: SSE para leitura com sequence numbers para reconnect gapless, e CCRClient para escrita via /worker/events.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> O transport layer e a base de toda comunicacao remota e entender seus modos e crucial para debugging.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> SSETransport, CCRClient, SerialBatchEventUploader, epoch mismatch (409), FlushGate para prevenir interleaving.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F512; Permission Bridge Protocol</div>
+                                <div class="text-xs dark:text-gray-500">control_request/response e synthetic messages</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> Prompts de permissao viajam pelo bridge via control_request/control_response. RemoteSessionManager coordena requests pendentes. createSyntheticAssistantMessage fabrica mensagens para tools remotos desconhecidos.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> O fluxo de permissoes e central a seguranca do sistema remoto e ao modelo de confianca.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> BridgePermissionResponse, createToolStub para MCP tools remotos, pendingPermissionRequests Map.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x2699;&#xFE0F; /remote-control Command &amp; Entitlements</div>
+                                <div class="text-xs dark:text-gray-500">BridgeToggle, 5 pre-flight checks, CCR mirror</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> O comando /remote-control executa 5 verificacoes antes de conectar: runtime gate, OAuth token, org policy, token freshness e min version. CCR Mirror Mode permite streaming outbound-only para sessoes read-only no claude.ai.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> Entender os gates de entitlement previne problemas de conexao e esclarece o modelo de seguranca.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> checkBridgePrerequisites, isCcrMirrorEnabled, outboundOnly mode, session title derivation (Haiku-generated).</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x2601;&#xFE0F; CCR Integration &amp; SDK Adapter</div>
+                                <div class="text-xs dark:text-gray-500">SessionsWebSocket, SDKMessage conversion</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> CCR e o ambiente de execucao server-side. SessionsWebSocket conecta ao subscribe endpoint. sdkMessageAdapter traduz mensagens SDK para o tipo interno Message do REPL, com regras especificas para ignorar user messages inbound.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> Entender a integracao CCR e fundamental para entender como sessoes remotas funcionam na pratica.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> SessionsWebSocket reconnect logic (5 attempts), convertSDKMessage table, user messages ignored to prevent duplication.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F5A5;&#xFE0F; Standalone Bridge Server Mode</div>
+                                <div class="text-xs dark:text-gray-500">runBridgeLoop, multi-session pool, token refresh</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> O modo servidor claude remote-control gerencia um pool de ate 32 child processes concorrentes com tres SpawnModes (single-session, worktree, same-dir), heartbeat JWT, sleep detection e 24h session timeout.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> O standalone bridge e a base de deploys em producao e CI/CD com Claude Code remoto.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> BackoffConfig (2s-120s), capacityWake, SessionHandle, BridgeWorkerType (claude_code, claude_code_assistant, cowork).</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-6-1')" class="px-4 py-2 bg-rose-500/20 text-rose-400 rounded-lg text-sm font-medium hover:bg-rose-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-6-1.html" class="px-4 py-2 text-rose-400 border border-rose-500/30 rounded-lg text-sm font-medium hover:bg-rose-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Module 6.2 -->
+        <section id="mod-6-2" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-rose-400 font-mono text-sm font-bold">6.2</span>
+                        <span class="text-xs dark:text-gray-500">~50 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">OAuth Authentication</h3>
+                    <p class="dark:text-gray-400 text-sm">OAuth 2.0 Authorization Code com PKCE, auto vs manual flow racing, token storage em keychain, refresh com scope expansion e logout seguro.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F510; PKCE Primitives &amp; Sequence</div>
+                                <div class="text-xs dark:text-gray-500">Code verifier, S256 challenge, state CSRF</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> PKCE substitui client secret. Code verifier (32 random bytes) vive apenas em memoria. S256 challenge e enviado ao servidor. State parameter protege contra CSRF. Nenhum segredo no binario.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> PKCE e o padrao moderno de seguranca OAuth para CLIs e entender cada valor previne vulnerabilidades.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> generateCodeVerifier(), generateCodeChallenge(), generateState(), base64url encoding, S256 method.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F3C1; Auto vs Manual Flow Racing</div>
+                                <div class="text-xs dark:text-gray-500">Dual flow, localhost callback, paste fallback</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> Ambos os flows iniciam simultaneamente. O automatico abre browser com redirect para localhost:PORT. O manual exibe URL para o usuario copiar/colar. Quem entregar o authorization code primeiro vence.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> O racing pattern e elegante e garante que SSH e ambientes headless funcionem sem configuracao extra.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> AuthCodeListener (port 0 auto-assign), state validation, pendingResponse pattern, hasPendingResponse().</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4BE; Token Storage &amp; Keychain Architecture</div>
+                                <div class="text-xs dark:text-gray-500">macOS keychain hex encoding, stale-while-error</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> Tokens armazenados em keychain nativa (macOS) ou plaintext com 0o600 (Linux). Hex encoding evita shell quoting issues e impede process monitors de ver o token. stdin preferido sobre argv.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> Decisoes de seguranca no armazenamento de credenciais sao criticas e instrutivas para qualquer aplicacao.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> security -i stdin vs argv fallback (4032B limit), stale-while-error cache, installOAuthTokens() sequence.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F504; Token Refresh &amp; Profile Skip</div>
+                                <div class="text-xs dark:text-gray-500">5-min buffer, scope expansion, 7M req/day saving</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> Refresh proativo com buffer de 5 minutos. Backend permite scope expansion no refresh. Profile fetch e skipped quando todos os campos ja estao cacheados, economizando ~7 milhoes de requests/dia.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> Otimizacoes de token refresh em escala de frota sao um caso de estudo excelente em engenharia de sistemas.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> isOAuthTokenExpired(), ALLOWED_SCOPE_EXPANSIONS, profile skip optimization, subscription type mapping.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F6AA; Logout &amp; Scopes</div>
+                                <div class="text-xs dark:text-gray-500">performLogout() teardown, 6 OAuth scopes</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> Logout flush telemetria ANTES de limpar credenciais (previne eventos anonimos). 6 scopes cobrem API key creation, profile, inference, sessions, MCP e file upload. FedStart/FedRAMP endpoints customizaveis.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> O ordering de logout e o modelo de scopes sao padroes de seguranca aplicaveis a qualquer sistema OAuth.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> Telemetry-first ordering, clearAuthRelatedCaches(), shouldUseClaudeAIAuth(), ALLOWED_OAUTH_BASE_URLS allowlist.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F3E2; Enterprise &amp; FedStart Configuration</div>
+                                <div class="text-xs dark:text-gray-500">Custom OAuth URLs, strict allowlist enforcement</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> CLAUDE_CODE_CUSTOM_OAUTH_URL redireciona todos os endpoints OAuth para deployments FedRAMP aprovados. Strict allowlist previne exfiltracao de credenciais para servidores arbitrarios.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> Configuracao enterprise demonstra como aplicar controles de seguranca em ambientes regulados.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> ALLOWED_OAUTH_BASE_URLS, FedStart beacon/staging endpoints, buildAuthUrl() parameter set, ?code=true upsell flag.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-6-2')" class="px-4 py-2 bg-rose-500/20 text-rose-400 rounded-lg text-sm font-medium hover:bg-rose-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-6-2.html" class="px-4 py-2 text-rose-400 border border-rose-500/30 rounded-lg text-sm font-medium hover:bg-rose-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Module 6.3 -->
+        <section id="mod-6-3" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-rose-400 font-mono text-sm font-bold">6.3</span>
+                        <span class="text-xs dark:text-gray-500">~50 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">Git Integration</h3>
+                    <p class="dark:text-gray-400 text-sm">Leitura zero-subprocess do estado Git via filesystem direto, config parser, GitFileWatcher com cache dirty-bit, e operation tracking via regex.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4C1; Zero-Subprocess Design Philosophy</div>
+                                <div class="text-xs dark:text-gray-500">5 source files, direct .git/ filesystem reads</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> Git state (branch, SHA, remote URL) e lido diretamente de .git/ files via Node fs APIs, nunca por subprocesso git. Cinco modulos cobrem filesystem, config parser, gitignore, operation tracking e gh auth.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> Eliminar subprocessos no hot path e uma decisao de performance fundamental com implicacoes de seguranca.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> gitFilesystem.ts, gitConfigParser.ts, resolveGitDir (worktree/submodule support), memoized per cwd.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4DD; Git Config Parser &amp; HEAD Reading</div>
+                                <div class="text-xs dark:text-gray-500">INI format, case rules, ref resolution</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> Parser hand-written que replica as regras de git: sections/keys case-insensitive, subsections case-sensitive, escapes dentro de aspas, inline comments. readGitHead parse ref: e SHA detached.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> O parser e verificado contra git source (config.c) e demonstra parsing robusto de formato legado.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> Three-level lookup (section, subsection, key), resolveRef (loose + packed-refs + worktree fallback), commonDir.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F440; GitFileWatcher: Dirty-Bit Cache</div>
+                                <div class="text-xs dark:text-gray-500">fs.watchFile, lazy recompute, branch switch</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> Singleton que mantem branch, HEAD SHA, remote URL e default branch em memoria, recomputando apenas quando arquivos mudam. Dirty flag cleared ANTES do async compute previne race conditions.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> O padrao dirty-before-compute e uma solucao elegante para invalidacao de cache assincrona.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> CacheEntry dirty flag, watchCurrentBranchRef(), computeDefaultBranch() 3-step cascade, inotify/kqueue-backed.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F6E1;&#xFE0F; Security: Ref Validation</div>
+                                <div class="text-xs dark:text-gray-500">isSafeRefName, isValidGitSha, injection defense</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> Strict allowlist [a-zA-Z0-9/._+@-] para ref names bloqueia path traversal, argument injection e shell metacharacters. Apenas SHAs full-length (40 ou 64 hex) sao aceitos. Falha retorna null silenciosamente.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> Validacao de input de filesystem e uma superficie de ataque real quando .git/ pode ser manipulado.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> isSafeRefName regex, isValidGitSha (SHA-1 40 + SHA-256 64), graceful degradation to safe fallback.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F50D; Operation Tracking &amp; PR Auto-Linking</div>
+                                <div class="text-xs dark:text-gray-500">Regex parsing, gh/glab/curl detection</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> detectGitOperation() parse command text e output via regex shell-agnostic para detectar commits, pushes, merges, rebases e PR creation (gh, glab, curl). PR URLs sao extraidos e linkados a sessao.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> Operation tracking e o bridge entre execucao de comandos e awareness contextual do sistema.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> gitCmdRe() tolerant of global flags, PR endpoint regex with sub-resource exclusion, dynamic import for circular deps.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F510; GitHub Auth &amp; Global Gitignore</div>
+                                <div class="text-xs dark:text-gray-500">gh auth token offline check, ~/.config/git/ignore</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> gh auth token (nao auth status) verifica autenticacao offline sem network request. stdout: 'ignore' garante que o token nunca entra na memoria Node. Global gitignore em ~/.config/git/ignore mantem .claude/ fora de todos os repos.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> Decisoes de seguranca como stdout: 'ignore' e global gitignore demonstram engenharia defensiva exemplar.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> getGhAuthStatus() offline-only, addFileGlobRuleToGitignore() global vs local, isPathGitignored() pre-check.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-6-3')" class="px-4 py-2 bg-rose-500/20 text-rose-400 rounded-lg text-sm font-medium hover:bg-rose-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-6-3.html" class="px-4 py-2 text-rose-400 border border-rose-500/30 rounded-lg text-sm font-medium hover:bg-rose-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Module 6.4 -->
+        <section id="mod-6-4" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-rose-400 font-mono text-sm font-bold">6.4</span>
+                        <span class="text-xs dark:text-gray-500">~45 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">Upstream Proxy</h3>
+                    <p class="dark:text-gray-400 text-sm">HTTPS CONNECT proxy MITM-capable via WebSocket tunnel em containers CCR, com protobuf hand-rolled, prctl anti-ptrace e dual authentication.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F3D7;&#xFE0F; Initialization Sequence</div>
+                                <div class="text-xs dark:text-gray-500">6 steps, fails-open design, token lifecycle</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> 6 passos sequenciais: guard env vars, read session token, set non-dumpable (prctl), download CA bundle, start relay, unlink token file. Cada step fails-open para nunca quebrar uma sessao funcional.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> O design fails-open com token deletion sequenciada e um padrao de seguranca robusto para sistemas distribuidos.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> CLAUDE_CODE_REMOTE + CCR_UPSTREAM_PROXY_ENABLED guards, prctl(PR_SET_DUMPABLE, 0), token deleted AFTER relay confirms.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F500; CONNECT-over-WebSocket Relay</div>
+                                <div class="text-xs dark:text-gray-500">Two-phase state machine, TCP coalescing race</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> Relay TCP local recebe CONNECT requests, abre WebSocket para gateway e tunela bytes bidirecionalmente. Two-phase handling: fase 1 acumula CONNECT header, fase 2 pumpa bytes para WS. Race condition de TCP coalescing resolvida via pending buffer.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> O relay demonstra programacao de rede low-level com tratamento correto de races e backpressure.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> handleData() two-phase, openTunnel(), st.pending[] for coalesced bytes, st.established TLS corruption guard.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4E6; Hand-Rolled Protobuf Encoding</div>
+                                <div class="text-xs dark:text-gray-500">Tag 0x0a, varint length, zero-length keepalive</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> Encoding manual do UpstreamProxyChunk protobuf: tag byte 0x0a (field 1, wire type 2), varint length, payload. Keepalives sao chunks zero-length. Content-Type: application/proto necessario para o gateway.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> Implementacao protobuf manual demonstra entendimento profundo do wire format e evita dependencia pesada.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> encodeChunk()/decodeChunk(), varint encoding, 512KB MAX_CHUNK_BYTES (Envoy cap), 30s ping interval.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F6E1;&#xFE0F; Security Model &amp; Dual Auth</div>
+                                <div class="text-xs dark:text-gray-500">prctl anti-ptrace, WS auth vs CONNECT auth</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> prctl(PR_SET_DUMPABLE, 0) bloqueia ptrace same-UID contra prompt injection. Dual auth: Bearer token para WS upgrade + Proxy-Authorization Basic para CONNECT tunnel. TLS corruption guard fecha TCP sem resposta apos established.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> Defesa em camadas contra prompt injection e um modelo de seguranca avancado e instrutivo.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> PR_SET_DUMPABLE via Bun FFI, Authorization vs Proxy-Authorization, st.established/st.closed guards.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F527; Bun vs Node Runtime &amp; Backpressure</div>
+                                <div class="text-xs dark:text-gray-500">writeBuf drain queue, WebSocket proxy agent</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> Node buffers writes incondicionalmente; Bun faz partial kernel write e silenciosamente descarta o resto. Relay Bun usa writeBuf[] com drain handler. WS proxy agent necessario porque undici nao consulta global dispatcher para upgrades.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> Diferencas de backpressure entre runtimes sao uma classe critica de bugs em sistemas de rede.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> Bun sock.write() partial write, writeBuf drain pattern, ws npm package for Node, Bun native proxy URL.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F310; Environment Variable Propagation</div>
+                                <div class="text-xs dark:text-gray-500">8 env vars, NO_PROXY triple format, HTTPS only</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> 8 env vars injetadas em todo subprocess: HTTPS_PROXY, SSL_CERT_FILE, NODE_EXTRA_CA_CERTS, REQUESTS_CA_BUNDLE, CURL_CA_BUNDLE etc. NO_PROXY lista Anthropic em 3 formatos para compatibilidade cross-runtime.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> Propagacao correta de proxy config para multiplos runtimes e um problema pratico comum em ambientes enterprise.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> HTTPS_PROXY only (no HTTP_PROXY), NO_PROXY triple format, inherited proxy vars for grandchild processes, CA bundle concatenation.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-6-4')" class="px-4 py-2 bg-rose-500/20 text-rose-400 rounded-lg text-sm font-medium hover:bg-rose-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-6-4.html" class="px-4 py-2 text-rose-400 border border-rose-500/30 rounded-lg text-sm font-medium hover:bg-rose-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Module 6.5 -->
+        <section id="mod-6-5" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-rose-400 font-mono text-sm font-bold">6.5</span>
+                        <span class="text-xs dark:text-gray-500">~50 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">Cron &amp; Scheduling</h3>
+                    <p class="dark:text-gray-400 text-sm">Scheduler cron built-in com JSON file storage, distributed lock, jitter deterministico por task ID e integracao React via hook.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4CB; CronTask Data Model</div>
+                                <div class="text-xs dark:text-gray-500">Durable vs session-only, recurring vs one-shot</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> CronTask com id (8-hex), cron (5-field local time), prompt, recurring flag e durable flag. Durable tasks persistem em .claude/scheduled_tasks.json. Session-only tasks vivem em memoria e morrem com o processo.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> O modelo de dados dual (durable/session) e o padrao bones/soul demonstram design elegante para diferentes lifecycles.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> durable flag never written to disk, permanent flag (exempt from expiry), agentId routing, MAX_JOBS=50 cap.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x23F1;&#xFE0F; Scheduler Lifecycle &amp; Check Loop</div>
+                                <div class="text-xs dark:text-gray-500">1s tick, lazy enable, chokidar watcher</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> Scheduler criado uma vez por sessao com design lazy-enable. check() executa a cada 1s, iterando file tasks (se lock owner) e session tasks. Recurring tasks reschedulam de now (nao do fire time) para evitar catch-up rapido.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> O design de catch-up prevention e o lazy-enable pattern sao aplicaveis a qualquer sistema de scheduling.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> enablePoll probing, chokidar file watcher, reschedule from now (not fire time), 7-day auto-expiry.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F512; Multi-Session Distributed Lock</div>
+                                <div class="text-xs dark:text-gray-500">PID-based liveness probe, session task exemption</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> Lock per-projeto previne double-firing quando multiplas sessoes Claude compartilham diretorio. Non-owner proba a cada 5s para takeover se owner crashar. Session tasks sao lock-exempt (vivem em memoria privada).</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> Distributed locking com PID-based liveness e a solucao minima correta para coordenacao local.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> tryAcquireSchedulerLock(), LOCK_PROBE_INTERVAL_MS=5000, isOwner gate for file tasks, session tasks unconditional.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F3AF; Deterministic Jitter System</div>
+                                <div class="text-xs dark:text-gray-500">Forward vs backward jitter, fleet load spreading</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> Jitter deterministico baseado no task ID (parseInt hex / 0x100000000). Recurring: forward jitter ate 10% do intervalo (cap 15min). One-shot: backward jitter ate 90s cedo, apenas em :00/:30 (minutos que humanos escolhem).</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> O sistema de jitter e um caso de estudo perfeito em engenharia de escala para prevenir thundering herd.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> jitterFrac() stable per taskId, recurringFrac=0.1, oneShotMinuteMod=30, GrowthBook live tuning.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F6E0;&#xFE0F; CronCreate/Delete/List Tools</div>
+                                <div class="text-xs dark:text-gray-500">50-job cap, off-minute heuristic, teammate scoping</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> CronCreate valida cron e limita a 50 jobs. System prompt instrui modelo a evitar :00/:30 para load shedding. CronList mostra apenas crons do teammate; lead ve tudo. CronDelete valida ownership.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> O off-minute heuristic no system prompt e o maior lever de load shedding, complementando o jitter runtime.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> Off-minute heuristic in system prompt, teammate agentId isolation, durable crons blocked for teammates.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F504; REPL Wiring &amp; Missed Tasks</div>
+                                <div class="text-xs dark:text-gray-500">useScheduledTasks hook, startup catch-up, injection defense</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> useScheduledTasks hook conecta scheduler ao REPL com priority 'later' (nunca interrompe query ativa). Missed one-shot tasks na startup geram notificacao com adaptive backtick fence (injection defense) e pedem confirmacao.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> A defesa de prompt injection via adaptive backtick fence e a integracao React demonstram engenharia de seguranca full-stack.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> WORKLOAD_CRON lower QoS, orphaned teammate cron cleanup, buildMissedTaskNotification() CommonMark fence-length rule.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-6-5')" class="px-4 py-2 bg-rose-500/20 text-rose-400 rounded-lg text-sm font-medium hover:bg-rose-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-6-5.html" class="px-4 py-2 text-rose-400 border border-rose-500/30 rounded-lg text-sm font-medium hover:bg-rose-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Module 6.6 -->
+        <section id="mod-6-6" class="mb-12">
+            <div class="dark:bg-dark-900 rounded-2xl border dark:border-gray-700/50 overflow-hidden">
+                <div class="p-6 border-b dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-rose-400 font-mono text-sm font-bold">6.6</span>
+                        <span class="text-xs dark:text-gray-500">~45 min</span>
+                    </div>
+                    <h3 class="text-2xl font-bold dark:text-white mb-2">Voice System</h3>
+                    <p class="dark:text-gray-400 text-sm">Pipeline push-to-talk com WebSocket STT, multi-backend audio capture (NAPI/arecord/SoX), hold threshold, silent-drop replay e focus mode.</p>
+                </div>
+                <div class="divide-y dark:divide-gray-800">
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F3A4; Feature Gating &amp; Audio Backends</div>
+                                <div class="text-xs dark:text-gray-500">Double gate (GrowthBook + OAuth), NAPI/arecord/SoX chain</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> Voice e double-gated: GrowthBook VOICE_MODE flag + Anthropic OAuth token. Tres backends em ordem: NAPI (in-process via cpal), arecord (Linux ALSA, 150ms runtime probe), SoX (external process). Probe memoizado.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> O fallback chain com runtime probe (nao apenas PATH check) demonstra deteccao robusta de disponibilidade.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> isVoiceGrowthBookEnabled(), hasVoiceAuth(), probeArecord() 150ms race, SoX --buffer 1024 anti-delay.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4F6; WebSocket STT Protocol</div>
+                                <div class="text-xs dark:text-gray-500">voice_stream endpoint, finalize() 4 triggers</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> Conecta a wss://api.anthropic.com/api/ws/speech_to_text/voice_stream com linear16 PCM 16kHz mono. finalize() resolve via 4 caminhos: post_closestream_endpoint (~300ms), no_data_timeout (1.5s), ws_close, safety_timeout (5s).</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> O protocolo STT e o finalize() multi-trigger demonstram design resiliente para comunicacao em tempo real.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> KeepAlive cada 8s, CloseStream em setTimeout(0), api.anthropic.com (nao claude.ai) por JA3 fingerprint, Buffer.from() anti-race.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F91A; Hold-to-Talk Mechanics</div>
+                                <div class="text-xs dark:text-gray-500">5-press threshold, stripTrailing(), release detection</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> Terminal nao tem keyup. Hold detectado por timing de auto-repeat (30-80ms gap). 5 presses rapidos ativam voice (previne acidental). Modifier combos ativam no primeiro press. stripTrailing() limpa spaces vazados.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> Reconstruir estado de teclado sem keyup events e um problema classico de terminal UI.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> RAPID_KEY_GAP_MS=120, HOLD_THRESHOLD=5, WARMUP_THRESHOLD=2, RELEASE_TIMEOUT_MS=200, full-width space normalization.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F504; Session State Machine &amp; Silent-Drop Replay</div>
+                                <div class="text-xs dark:text-gray-500">idle/recording/processing, 1% bug workaround</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> 3 estados: idle, recording, processing. State 'recording' setado SINCRONAMENTE antes de qualquer await. ~1% das sessoes hit silent-drop (CE pod sticky). Client detecta e replaya full audio buffer em novo WS com 250ms backoff.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> O silent-drop replay e um workaround client-side para bug server-side, demonstrando resiliencia na pratica.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> Synchronous state transition before await, 6 conditions for replay, 32KB replay slice size, fullAudioRef skipped in focus mode.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F3AF; Focus Mode &amp; Language/Keyterms</div>
+                                <div class="text-xs dark:text-gray-500">Terminal focus trigger, 5s silence timeout, STT boosting</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> Focus mode: recording inicia com focus gain, para com focus loss. Transcripts flushed imediatamente (nao acumulados). 5s silence timeout. Keyterms (ate 50) de termos globais + project + branch boosteiam STT.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> Focus mode demonstra design arquitetural diferente do hold-to-talk com tradeoffs especificos.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> FOCUS_SILENCE_TIMEOUT_MS=5000, no audio buffer (no replay), normalizeLanguageForSTT() BCP-47, splitIdentifier() camelCase.</div>
+                        </div>
+                    </div>
+                    <div class="topic-item" onclick="toggleTopic(this)">
+                        <div class="flex items-center gap-3 p-4 cursor-pointer hover:bg-rose-500/5 transition-colors">
+                            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold flex-shrink-0">6</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium dark:text-white text-sm">&#x1F4CA; Audio Visualization &amp; React Context</div>
+                                <div class="text-xs dark:text-gray-500">RMS computation, sqrt curve, Store-based state</div>
+                            </div>
+                        </div>
+                        <div class="topic-content hidden px-4 pb-4 ml-9 space-y-3 text-sm dark:text-gray-300">
+                            <div><strong class="text-rose-400">O que e:</strong> 16-bar waveform via RMS computation de PCM 16-bit. sqrt(normalized) spreads quieter levels. VoiceState em custom Store (nao React state) via useSyncExternalStore. useVoiceEnabled memoiza auth por authVersion.</div>
+                            <div><strong class="text-rose-400">Por que aprender:</strong> Audio visualization com sqrt curve e o pattern Store + useSyncExternalStore demonstram otimizacao de rendering.</div>
+                            <div><strong class="text-rose-400">Conceitos-chave:</strong> computeLevel() RMS, AUDIO_LEVEL_BARS=16, sqrt curve for speech energy, Store subscription slicing, early-error retry (250ms).</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-start gap-3">
+                    <button onclick="openModal('modal-6-6')" class="px-4 py-2 bg-rose-500/20 text-rose-400 rounded-lg text-sm font-medium hover:bg-rose-500/30 transition-colors">Ver em Modal</button>
+                    <a href="modulo-6-6.html" class="px-4 py-2 text-rose-400 border border-rose-500/30 rounded-lg text-sm font-medium hover:bg-rose-500/10 transition-colors">Ver Completo</a>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modals -->
+    <div id="modal-6-1" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-6-1')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-6-1')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-6-1.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+    <div id="modal-6-2" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-6-2')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-6-2')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-6-2.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+    <div id="modal-6-3" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-6-3')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-6-3')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-6-3.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+    <div id="modal-6-4" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-6-4')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-6-4')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-6-4.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+    <div id="modal-6-5" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-6-5')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-6-5')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-6-5.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+    <div id="modal-6-6" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('modal-6-6')">
+        <div class="bg-dark-900 rounded-2xl w-full max-w-6xl h-[90vh] overflow-hidden relative border border-gray-700/50">
+            <button onclick="closeModal('modal-6-6')" class="absolute top-4 right-4 z-10 w-8 h-8 bg-dark-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">X</button>
+            <iframe src="modulo-6-6.html" class="w-full h-full"></iframe>
+        </div>
+    </div>
+
+    <script>
+        function toggleTopic(el) {
+            const content = el.querySelector('.topic-content');
+            const section = el.closest('.divide-y');
+            if (!content) return;
+            const wasHidden = content.classList.contains('hidden');
+            section.querySelectorAll('.topic-content').forEach(c => c.classList.add('hidden'));
+            if (wasHidden) content.classList.remove('hidden');
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.classList.contains('dark');
+            html.classList.toggle('dark', !isDark);
+            html.classList.toggle('light', isDark);
+            localStorage.setItem('theme', isDark ? 'light' : 'dark');
+        }
+
+        (function() {
+            const saved = localStorage.getItem('theme');
+            if (saved === 'light') {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+            }
+        })();
+    </script>
+</body>
+</html>
